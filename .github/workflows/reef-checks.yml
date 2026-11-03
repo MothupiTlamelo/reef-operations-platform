@@ -1,0 +1,171 @@
+name: REEF Checks
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - "feature/**"
+  pull_request:
+    branches:
+      - main
+      - develop
+
+permissions:
+  contents: read
+
+jobs:
+  quick-tests:
+    name: Quick Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reef-main
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: reef-main/package-lock.json
+      - run: npm ci
+      - run: npm run test:quick
+
+  typecheck:
+    name: Root Type Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reef-main
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: reef-main/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+
+  lint:
+    name: Root Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reef-main
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: reef-main/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+
+  build:
+    name: Root Production Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reef-main
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: reef-main/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  shared:
+    name: Shared Package
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reef-main/shared
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: reef-main/shared/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+
+  api:
+    name: API Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reef-main/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            reef-main/api/package-lock.json
+            reef-main/shared/package-lock.json
+      - name: Install and build shared package
+        working-directory: reef-main/shared
+        run: npm ci && npm run build
+      - name: Install API dependencies
+        run: npm ci
+      - name: API type check
+        run: npm run typecheck
+      - name: API tests
+        run: npm test
+      - name: API production build
+        run: npm run build
+      - name: Verify endpoint list
+        run: npm run endpoints:check
+
+  web:
+    name: Web Checks
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reef-main/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            reef-main/web/package-lock.json
+            reef-main/shared/package-lock.json
+      - name: Install and build shared package
+        working-directory: reef-main/shared
+        run: npm ci && npm run build
+      - name: Install web dependencies
+        run: npm ci
+      - name: Web type check
+        run: npm run typecheck
+      - name: Web tests
+        run: npm test
+      - name: Web production build
+        run: npm run build
+      - name: Web lint
+        run: npm run lint
+
+  secrets-check:
+    name: Secrets Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: reef-main
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: reef-main/package-lock.json
+      - run: npm ci
+      - run: npm run secrets:check
