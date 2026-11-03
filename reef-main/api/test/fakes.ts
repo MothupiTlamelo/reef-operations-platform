@@ -22,6 +22,7 @@ import type {
   StockLevelPatch,
   StockPatch,
   UserSummary,
+
 } from "@reef/shared";
 import type { Machine } from "../src/services/service-due.js";
 import { createApp } from "../src/app.js";
@@ -54,6 +55,7 @@ import type {
   StockUsageRepository,
   UpdateResult,
   UserContext,
+    WorkerPurchasesRepository,
   UserRepository,
   UserSession,
 } from "../src/repositories/types.js";
@@ -1050,7 +1052,147 @@ export function testApp(overrides: Partial<Repositories> = {}) {
     viewUrl: async (path) =>
       path.includes("forbidden") ? null : `https://storage.test/view/${path}`,
   };
+const workerPurchaseRows: Row[] = [];
 
+const workerPurchases: WorkerPurchasesRepository = {
+  async list(query, filters) {
+    let rows = workerPurchaseRows.filter((row) => {
+      if (filters.status && row.status !== filters.status) return false;
+      if (filters.worker_id && row.worker_id !== filters.worker_id) return false;
+      if (filters.mine_id && row.mine_id !== filters.mine_id) return false;
+      if (
+        filters.month &&
+        !String(row.date ?? "").startsWith(filters.month)
+      ) return false;
+
+      return true;
+    });
+
+    const total = rows.length;
+    const sort = query.sort ?? "date";
+    const direction = query.order === "asc" ? 1 : -1;
+
+    rows = [...rows].sort((a, b) => {
+      const left = a[sort];
+      const right = b[sort];
+
+      if (sort === "amount") {
+        return (Number(left ?? 0) - Number(right ?? 0)) * direction;
+      }
+
+      return String(left ?? "").localeCompare(String(right ?? "")) * direction;
+    });
+
+    const start = (query.page - 1) * query.pageSize;
+
+    return {
+      rows: rows.slice(start, start + query.pageSize).map((row) => ({ ...row })),
+      total,
+    };
+  },
+
+  async summary() {
+    const now = new Date();
+
+    const monthStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    )
+      .toISOString()
+      .slice(0, 10);
+
+    const pending = workerPurchaseRows.filter(
+      (row) => row.status === "pending",
+    );
+
+    const paid = workerPurchaseRows.filter(
+      (row) =>
+        row.status === "paid" &&
+        String(row.paid_on ?? "") >= monthStart,
+    );
+
+    const sum = (rows: Row[]) =>
+      Math.round(
+        rows.reduce(
+          (total, row) => total + Number(row.amount ?? 0),
+          0,
+        ) * 100,
+      ) / 100;
+
+    return {
+      pending_count: pending.length,
+      pending_total: sum(pending),
+      paid_this_month_count: paid.length,
+      paid_this_month_total: sum(paid),
+    };
+  },
+
+  async create(input, loggedBy) {
+    const raw = input as Record<string, unknown>;
+
+    const row: Row = {
+      ...raw,
+      id: randomUUID(),
+      worker_id: raw.worker_id ?? loggedBy,
+      logged_by: loggedBy,
+      status: "pending",
+      paid_on: null,
+      paid_by: null,
+      voided_reason: null,
+      receipt_urls: raw.receipt_urls ?? [],
+      created_at: new Date().toISOString(),
+    };
+
+    workerPurchaseRows.push(row);
+    return { ...row };
+  },
+
+  async setStatus(id, change, actorId) {
+    const index = workerPurchaseRows.findIndex(
+      (row) => row.id === id,
+    );
+
+    if (index === -1) return null;
+
+    const existing = workerPurchaseRows[index];
+
+    const updated: Row = {
+      ...existing,
+      status: change.status,
+      ...(change.status === "paid"
+        ? {
+            paid_on: new Date().toISOString().slice(0, 10),
+            paid_by: actorId,
+          }
+        : {
+            voided_reason: change.reason ?? null,
+          }),
+    };
+
+    workerPurchaseRows[index] = updated;
+    return { ...updated };
+  },
+
+  async markPaid(ids, actorId) {
+    let paid = 0;
+
+    for (let i = 0; i < workerPurchaseRows.length; i++) {
+      const row = workerPurchaseRows[i];
+
+      if (ids.includes(String(row.id)) && row.status === "pending") {
+        workerPurchaseRows[i] = {
+          ...row,
+          status: "paid",
+          paid_on: new Date().toISOString().slice(0, 10),
+          paid_by: actorId,
+        };
+
+        paid++;
+      }
+    }
+
+    return { paid };
+  },
+};
   const sessionRows: UserSession[] = [];
   const settingsStore: Setting[] = [
     {
@@ -1120,6 +1262,8 @@ export function testApp(overrides: Partial<Repositories> = {}) {
         reportRuns,
         retention,
         notifications,
+        workerPurchases,
+        workerPurchaseRows,
         jobs,
         reorderRequests,
         ...overrides,
@@ -1176,5 +1320,6 @@ export function testApp(overrides: Partial<Repositories> = {}) {
     settingsStore,
     logged,
     call,
+      
   };
 }
