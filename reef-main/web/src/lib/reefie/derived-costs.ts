@@ -61,8 +61,7 @@ export function withDerivedCosts<T extends ProductionCostsInput>(data: T) {
         total_cost: round2(pp.total_cost),
         cost_per_ton_change_pct:
           pp.cost_per_ton_change_pct == null ? null : round2(pp.cost_per_ton_change_pct),
-        cost_per_ton_delta:
-          pp.cost_per_ton_delta == null ? null : round2(pp.cost_per_ton_delta),
+        cost_per_ton_delta: pp.cost_per_ton_delta == null ? null : round2(pp.cost_per_ton_delta),
       }
     : undefined;
 

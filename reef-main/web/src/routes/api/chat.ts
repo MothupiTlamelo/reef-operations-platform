@@ -296,9 +296,7 @@ export const Route = createFileRoute("/api/chat")({
               }),
               execute: async ({ days }: { days?: number }) => {
                 const windowDays = days ?? 30;
-                const since = new Date(Date.now() - windowDays * 864e5)
-                  .toISOString()
-                  .slice(0, 10);
+                const since = new Date(Date.now() - windowDays * 864e5).toISOString().slice(0, 10);
                 const today = new Date().toISOString().slice(0, 10);
                 const [{ data: logs }, { data: equip }, { data: down }] = await Promise.all([
                   supabase
@@ -325,9 +323,8 @@ export const Route = createFileRoute("/api/chat")({
                   window_days: windowDays,
                   maintenance_spend: logsArr.reduce((s, l) => s + num(l.total_cost), 0),
                   repair_count: logsArr.length,
-                  overdue_count: logsArr.filter(
-                    (l) => l.next_due_date && l.next_due_date <= today,
-                  ).length,
+                  overdue_count: logsArr.filter((l) => l.next_due_date && l.next_due_date <= today)
+                    .length,
                   equipment_by_life_used: eq
                     .filter((e) => num(e.expected_life_tons) > 0)
                     .map((e) => ({
@@ -363,22 +360,11 @@ export const Route = createFileRoute("/api/chat")({
                 "Downtime events grouped by mine over a look-back window. Use this for questions about which mine has the most downtime, downtime hours per mine, downtime cost per mine, or the reasons for downtime at each mine.",
               inputSchema: z.object({
                 days: z.number().optional().describe("Look-back window in days, default 30"),
-                mine_name: z
-                  .string()
-                  .optional()
-                  .describe("Optional: restrict to one mine by name"),
+                mine_name: z.string().optional().describe("Optional: restrict to one mine by name"),
               }),
-              execute: async ({
-                days,
-                mine_name,
-              }: {
-                days?: number;
-                mine_name?: string;
-              }) => {
+              execute: async ({ days, mine_name }: { days?: number; mine_name?: string }) => {
                 const windowDays = days ?? 30;
-                const since = new Date(Date.now() - windowDays * 864e5)
-                  .toISOString()
-                  .slice(0, 10);
+                const since = new Date(Date.now() - windowDays * 864e5).toISOString().slice(0, 10);
 
                 const [{ data: events }, { data: mines }] = await Promise.all([
                   supabase
@@ -424,10 +410,7 @@ export const Route = createFileRoute("/api/chat")({
                     cost: Math.round(v.cost * 100) / 100,
                     events: v.events,
                     reasons: Object.fromEntries(
-                      Object.entries(v.reasons).map(([r, h]) => [
-                        r,
-                        Math.round(h * 100) / 100,
-                      ]),
+                      Object.entries(v.reasons).map(([r, h]) => [r, Math.round(h * 100) / 100]),
                     ),
                   }))
                   .sort((a, b) => b.hours - a.hours);
@@ -553,7 +536,9 @@ export const Route = createFileRoute("/api/chat")({
                   );
                 }
                 if ((prevStatics ?? []).length === 0) {
-                  dataNotes.push("previous period has no static costs, so cost_per_ton comparison may be misleading");
+                  dataNotes.push(
+                    "previous period has no static costs, so cost_per_ton comparison may be misleading",
+                  );
                 }
                 if (prodArr.length === 0) {
                   dataNotes.push("current period has no production rows in the window");
@@ -608,9 +593,7 @@ export const Route = createFileRoute("/api/chat")({
                 shift?: "morning" | "midday" | "night";
                 active_only?: boolean;
               }) => {
-                let q = supabase
-                  .from("employees")
-                  .select("id, shift, active", { count: "exact" });
+                let q = supabase.from("employees").select("id, shift, active", { count: "exact" });
                 if (active_only !== false) q = q.eq("active", true);
                 if (mine_id) q = q.eq("mine_id", mine_id);
                 if (shift) q = q.eq("shift", shift);
@@ -658,11 +641,17 @@ export const Route = createFileRoute("/api/chat")({
           stopWhen: stepCountIs(6),
         });
 
-        const check1 = verifyAnswer(result1.text, captured1.map((c) => c.output));
+        const check1 = verifyAnswer(
+          result1.text,
+          captured1.map((c) => c.output),
+        );
 
         // Log-only scope check: measure false positives without refusing.
         const missingTerms = lastUserText
-          ? ungroundedTerms(lastUserText, captured1.map((c) => c.output))
+          ? ungroundedTerms(
+              lastUserText,
+              captured1.map((c) => c.output),
+            )
           : [];
         if (missingTerms.length > 0) {
           console.warn("[scope-guard] possible out-of-scope terms:", missingTerms);
@@ -699,7 +688,10 @@ export const Route = createFileRoute("/api/chat")({
             stopWhen: stepCountIs(6),
           });
           allCaptured.push(...captured2);
-          const check2 = verifyAnswer(result2.text, captured2.map((c) => c.output));
+          const check2 = verifyAnswer(
+            result2.text,
+            captured2.map((c) => c.output),
+          );
           if (check2.ok) {
             finalText = result2.text;
             numberCheck = { passed: true, unverifiedNumbers: [], reason: "ok" };
@@ -742,7 +734,10 @@ export const Route = createFileRoute("/api/chat")({
             stopWhen: stepCountIs(3),
           });
           allCaptured.push(...captured3);
-          const check3 = verifyAnswer(result3.text, captured3.map((c) => c.output));
+          const check3 = verifyAnswer(
+            result3.text,
+            captured3.map((c) => c.output),
+          );
           if (check3.ok && result3.text.trim().length > 0) {
             finalText = result3.text;
             numberCheck = { passed: true, unverifiedNumbers: [], reason: "ok" };

@@ -27,7 +27,10 @@ function Page() {
     (list.data ?? []).forEach((d) => {
       map[d.reason] = (map[d.reason] ?? 0) + Number(d.duration_hours);
     });
-    return Object.entries(map).map(([reason, hours]) => ({ reason: REASON_LABEL[reason] ?? reason, hours }));
+    return Object.entries(map).map(([reason, hours]) => ({
+      reason: REASON_LABEL[reason] ?? reason,
+      hours,
+    }));
   }, [list.data]);
 
   const totalHours = (list.data ?? []).reduce((s, d) => s + Number(d.duration_hours), 0);
@@ -37,19 +40,28 @@ function Page() {
       <PageHeader title="Downtime" description="Hours lost by cause, per site." />
       <div className="grid gap-4 md:grid-cols-2 mb-4">
         <Card>
-          <CardHeader><CardTitle>Total downtime</CardTitle></CardHeader>
-          <CardContent><div className="text-3xl font-bold">{totalHours.toFixed(1)} h</div></CardContent>
+          <CardHeader>
+            <CardTitle>Total downtime</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalHours.toFixed(1)} h</div>
+          </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle>Hours by cause</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Hours by cause</CardTitle>
+          </CardHeader>
           <CardContent style={{ height: 200 }}>
             {byReason.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">No downtime logged</div>
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                No downtime logged
+              </div>
             ) : (
               <ResponsiveContainer>
                 <BarChart data={byReason}>
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                  <XAxis dataKey="reason" fontSize={11} /><YAxis fontSize={11} />
+                  <XAxis dataKey="reason" fontSize={11} />
+                  <YAxis fontSize={11} />
                   <Tooltip formatter={(v: any) => `${v} h`} />
                   <Bar dataKey="hours" fill="#ef4444" />
                 </BarChart>
@@ -61,11 +73,39 @@ function Page() {
       <DataTable
         rows={list.data ?? []}
         columns={[
-          { key: "start_time", label: "When", render: (r: any) => new Date(r.start_time).toLocaleString() },
-          { key: "mine", label: "Mine", render: (r: any) => mines.data?.find((m) => m.id === r.mine_id)?.name ?? "—" },
-          { key: "reason", label: "Reason", render: (r: any) => <Badge variant={r.reason === "breakdown" || r.reason === "no_stock" ? "destructive" : "secondary"}>{REASON_LABEL[r.reason] ?? r.reason}</Badge> },
-          { key: "equipment", label: "Equipment", render: (r: any) => equipment.data?.find((e) => e.id === r.equipment_id)?.name ?? "—" },
-          { key: "duration_hours", label: "Hours", render: (r: any) => `${Number(r.duration_hours).toFixed(1)} h` },
+          {
+            key: "start_time",
+            label: "When",
+            render: (r: any) => new Date(r.start_time).toLocaleString(),
+          },
+          {
+            key: "mine",
+            label: "Mine",
+            render: (r: any) => mines.data?.find((m) => m.id === r.mine_id)?.name ?? "—",
+          },
+          {
+            key: "reason",
+            label: "Reason",
+            render: (r: any) => (
+              <Badge
+                variant={
+                  r.reason === "breakdown" || r.reason === "no_stock" ? "destructive" : "secondary"
+                }
+              >
+                {REASON_LABEL[r.reason] ?? r.reason}
+              </Badge>
+            ),
+          },
+          {
+            key: "equipment",
+            label: "Equipment",
+            render: (r: any) => equipment.data?.find((e) => e.id === r.equipment_id)?.name ?? "—",
+          },
+          {
+            key: "duration_hours",
+            label: "Hours",
+            render: (r: any) => `${Number(r.duration_hours).toFixed(1)} h`,
+          },
           { key: "notes", label: "Notes" },
         ]}
         empty="No downtime events logged yet."

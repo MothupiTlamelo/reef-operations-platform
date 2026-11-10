@@ -1,10 +1,23 @@
 import { useState, type ReactNode } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 
 export function ResourceDialog({
-  title, trigger, children, onSave, editing, open: openProp, onOpenChange,
+  title,
+  trigger,
+  children,
+  onSave,
+  editing,
+  open: openProp,
+  onOpenChange,
 }: {
   title: string;
   /** null: the screen opens the dialog itself, so no trigger is rendered. */
@@ -23,10 +36,17 @@ export function ResourceDialog({
       {trigger === null ? null : trigger !== undefined ? (
         <DialogTrigger asChild>{trigger}</DialogTrigger>
       ) : (
-        <DialogTrigger asChild><Button><Plus className="w-4 h-4 mr-1" />Add</Button></DialogTrigger>
+        <DialogTrigger asChild>
+          <Button>
+            <Plus className="w-4 h-4 mr-1" />
+            Add
+          </Button>
+        </DialogTrigger>
       )}
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{editing ? `Edit ${title}` : `New ${title}`}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>{editing ? `Edit ${title}` : `New ${title}`}</DialogTitle>
+        </DialogHeader>
         {children(() => setOpen(false))}
       </DialogContent>
     </Dialog>

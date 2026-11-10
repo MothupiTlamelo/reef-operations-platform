@@ -10,9 +10,7 @@
 
 export type BadNumber = { value: number; raw: string };
 
-export type CheckResult =
-  | { ok: true }
-  | { ok: false; badNumbers: BadNumber[] };
+export type CheckResult = { ok: true } | { ok: false; badNumbers: BadNumber[] };
 
 export type FoundNumber = {
   value: number;
@@ -32,9 +30,9 @@ const NUMBER_RE = new RegExp(
   `(?<![\\w])` +
     `(R\\s*)?` +
     `(` +
-      `\\d{1,3}(?:[ ${NBSP}${NNBSP},.']\\d{3})*(?:[.,]\\d+)?` +
-      `|` +
-      `\\d+(?:[.,]\\d+)?` +
+    `\\d{1,3}(?:[ ${NBSP}${NNBSP},.']\\d{3})*(?:[.,]\\d+)?` +
+    `|` +
+    `\\d+(?:[.,]\\d+)?` +
     `)` +
     `(\\s*(?:[Bb]illion|[Mm]illion|[Tt]housand)|bn|mn|[MmKk])?` +
     `(?![\\w])`,

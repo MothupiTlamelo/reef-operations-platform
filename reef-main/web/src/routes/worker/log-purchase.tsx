@@ -68,8 +68,8 @@ function Page() {
     <div className="space-y-4">
       <h1 className="text-xl font-bold">Money I spent</h1>
       <p className="text-sm text-muted-foreground">
-        Bought something for the site out of your own pocket? Record it here and you'll
-        be paid back at month end.
+        Bought something for the site out of your own pocket? Record it here and you'll be paid back
+        at month end.
       </p>
 
       <div className="space-y-2">

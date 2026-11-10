@@ -1,5 +1,12 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowDown, ArrowUp, ArrowUpDown, Pencil, Trash2 } from "lucide-react";
@@ -26,15 +33,25 @@ function compare(a: Plain, b: Plain, dir: Sort["dir"]): number {
   const emptyA = a === null || a === undefined || a === "";
   const emptyB = b === null || b === undefined || b === "";
   if (emptyA || emptyB) return emptyA === emptyB ? 0 : emptyA ? 1 : -1;
-  const order = typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b));
+  const order =
+    typeof a === "number" && typeof b === "number" ? a - b : String(a).localeCompare(String(b));
   return dir === "asc" ? order : -order;
 }
 
 export function DataTable<T extends { id: string }>({
-  rows, columns, onEdit, onDelete, empty, searchable, searchLabel = "Search", pageSize,
+  rows,
+  columns,
+  onEdit,
+  onDelete,
+  empty,
+  searchable,
+  searchLabel = "Search",
+  pageSize,
 }: {
-  rows: T[]; columns: Column<T>[];
-  onEdit?: (row: T) => void; onDelete?: (row: T) => void;
+  rows: T[];
+  columns: Column<T>[];
+  onEdit?: (row: T) => void;
+  onDelete?: (row: T) => void;
   empty?: string;
   /** Shows a search box that keeps only rows where any column contains the text. */
   searchable?: boolean;
@@ -52,7 +69,13 @@ export function DataTable<T extends { id: string }>({
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     let out = q
-      ? rows.filter((row) => columns.some((c) => String(valueOf(row, c) ?? "").toLowerCase().includes(q)))
+      ? rows.filter((row) =>
+          columns.some((c) =>
+            String(valueOf(row, c) ?? "")
+              .toLowerCase()
+              .includes(q),
+          ),
+        )
       : rows;
     if (sort) {
       const col = columns.find((c) => c.key === sort.key);
@@ -68,11 +91,18 @@ export function DataTable<T extends { id: string }>({
   const visible = pageSize ? shown.slice((current - 1) * pageSize, current * pageSize) : shown;
 
   const toggleSort = (key: string) => {
-    setSort((s) => (s?.key !== key ? { key, dir: "asc" } : s.dir === "asc" ? { key, dir: "desc" } : null));
+    setSort((s) =>
+      s?.key !== key ? { key, dir: "asc" } : s.dir === "asc" ? { key, dir: "desc" } : null,
+    );
     setPage(1);
   };
 
-  if (!rows.length) return <div className="text-center text-sm text-muted-foreground py-12 border rounded-md">{empty ?? "No records yet."}</div>;
+  if (!rows.length)
+    return (
+      <div className="text-center text-sm text-muted-foreground py-12 border rounded-md">
+        {empty ?? "No records yet."}
+      </div>
+    );
 
   return (
     <div className="space-y-3">
@@ -82,7 +112,10 @@ export function DataTable<T extends { id: string }>({
           aria-label={searchLabel}
           placeholder={`${searchLabel}…`}
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setPage(1);
+          }}
           className="max-w-xs"
         />
       )}
@@ -95,14 +128,34 @@ export function DataTable<T extends { id: string }>({
                 return (
                   <TableHead
                     key={c.key}
-                    aria-sort={c.sortable ? (active === "asc" ? "ascending" : active === "desc" ? "descending" : "none") : undefined}
+                    aria-sort={
+                      c.sortable
+                        ? active === "asc"
+                          ? "ascending"
+                          : active === "desc"
+                            ? "descending"
+                            : "none"
+                        : undefined
+                    }
                   >
                     {c.sortable ? (
-                      <button type="button" onClick={() => toggleSort(c.key)} className="inline-flex items-center gap-1 hover:text-foreground">
+                      <button
+                        type="button"
+                        onClick={() => toggleSort(c.key)}
+                        className="inline-flex items-center gap-1 hover:text-foreground"
+                      >
                         {c.label}
-                        {active === "asc" ? <ArrowUp className="w-3 h-3" aria-hidden /> : active === "desc" ? <ArrowDown className="w-3 h-3" aria-hidden /> : <ArrowUpDown className="w-3 h-3 opacity-50" aria-hidden />}
+                        {active === "asc" ? (
+                          <ArrowUp className="w-3 h-3" aria-hidden />
+                        ) : active === "desc" ? (
+                          <ArrowDown className="w-3 h-3" aria-hidden />
+                        ) : (
+                          <ArrowUpDown className="w-3 h-3 opacity-50" aria-hidden />
+                        )}
                       </button>
-                    ) : c.label}
+                    ) : (
+                      c.label
+                    )}
                   </TableHead>
                 );
               })}
@@ -112,33 +165,82 @@ export function DataTable<T extends { id: string }>({
           <TableBody>
             {visible.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length + 1} className="text-center text-sm text-muted-foreground py-8">
+                <TableCell
+                  colSpan={columns.length + 1}
+                  className="text-center text-sm text-muted-foreground py-8"
+                >
                   No records match “{query}”.
                 </TableCell>
               </TableRow>
-            ) : visible.map((row) => (
-              <TableRow key={row.id}>
-                {columns.map((c) => <TableCell key={c.key}>{c.render ? c.render(row) : (row as any)[c.key] ?? "—"}</TableCell>)}
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-1">
-                    {onEdit && <Button size="icon" variant="ghost" aria-label="Edit" onClick={() => onEdit(row)}><Pencil className="w-4 h-4" /></Button>}
-                    {onDelete && <Button size="icon" variant="ghost" aria-label="Delete" onClick={() => { if (confirm("Delete this record?")) onDelete(row); }}><Trash2 className="w-4 h-4" /></Button>}
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
+            ) : (
+              visible.map((row) => (
+                <TableRow key={row.id}>
+                  {columns.map((c) => (
+                    <TableCell key={c.key}>
+                      {c.render ? c.render(row) : ((row as any)[c.key] ?? "—")}
+                    </TableCell>
+                  ))}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      {onEdit && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Edit"
+                          onClick={() => onEdit(row)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label="Delete"
+                          onClick={() => {
+                            if (confirm("Delete this record?")) onDelete(row);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </div>
       {pageSize && shown.length > 0 && (
-        <nav aria-label="Pages" className="flex items-center justify-between text-sm text-muted-foreground">
+        <nav
+          aria-label="Pages"
+          className="flex items-center justify-between text-sm text-muted-foreground"
+        >
           <span>
-            Showing {(current - 1) * pageSize + 1}–{Math.min(current * pageSize, shown.length)} of {shown.length}
+            Showing {(current - 1) * pageSize + 1}–{Math.min(current * pageSize, shown.length)} of{" "}
+            {shown.length}
           </span>
           <span className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => setPage(current - 1)} disabled={current <= 1}>Previous</Button>
-            <span>Page {current} of {pages}</span>
-            <Button size="sm" variant="outline" onClick={() => setPage(current + 1)} disabled={current >= pages}>Next</Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage(current - 1)}
+              disabled={current <= 1}
+            >
+              Previous
+            </Button>
+            <span>
+              Page {current} of {pages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage(current + 1)}
+              disabled={current >= pages}
+            >
+              Next
+            </Button>
           </span>
         </nav>
       )}

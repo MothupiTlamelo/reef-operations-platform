@@ -29,8 +29,10 @@ function Page() {
     if (editing && why === null) return;
     await upsert.mutateAsync({
       ...(editing?.id ? { id: editing.id, changeReason: why } : {}),
-      name: f.get("name"), contact_name: f.get("contact_name") || null,
-      email: f.get("email") || null, phone: f.get("phone") || null,
+      name: f.get("name"),
+      contact_name: f.get("contact_name") || null,
+      email: f.get("email") || null,
+      phone: f.get("phone") || null,
       notes: f.get("notes") || null,
     });
     setOpen(false);
@@ -38,31 +40,65 @@ function Page() {
 
   return (
     <div>
-      <PageHeader title="Suppliers" description="Vendors of parts, magnetite and consumables." actions={
-        <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="w-4 h-4 mr-1" />New supplier</Button>
-      } />
+      <PageHeader
+        title="Suppliers"
+        description="Vendors of parts, magnetite and consumables."
+        actions={
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="w-4 h-4 mr-1" />
+            New supplier
+          </Button>
+        }
+      />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>{editing ? "Edit supplier" : "New supplier"}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>{editing ? "Edit supplier" : "New supplier"}</DialogTitle>
+          </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-3">
-            <Field label="Name"><Input name="name" required defaultValue={editing?.name} /></Field>
-            <Field label="Contact name"><Input name="contact_name" defaultValue={editing?.contact_name ?? ""} /></Field>
+            <Field label="Name">
+              <Input name="name" required defaultValue={editing?.name} />
+            </Field>
+            <Field label="Contact name">
+              <Input name="contact_name" defaultValue={editing?.contact_name ?? ""} />
+            </Field>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Email"><Input name="email" type="email" defaultValue={editing?.email ?? ""} /></Field>
-              <Field label="Phone"><Input name="phone" defaultValue={editing?.phone ?? ""} /></Field>
+              <Field label="Email">
+                <Input name="email" type="email" defaultValue={editing?.email ?? ""} />
+              </Field>
+              <Field label="Phone">
+                <Input name="phone" defaultValue={editing?.phone ?? ""} />
+              </Field>
             </div>
-            <Field label="Notes"><Textarea name="notes" rows={2} defaultValue={editing?.notes ?? ""} /></Field>
+            <Field label="Notes">
+              <Textarea name="notes" rows={2} defaultValue={editing?.notes ?? ""} />
+            </Field>
             {editing && <ReasonField reason={reason} />}
-            <Button type="submit" className="w-full">Save</Button>
+            <Button type="submit" className="w-full">
+              Save
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
-      <DataTable rows={list.data ?? []} columns={[
-        { key: "name", label: "Supplier" },
-        { key: "contact_name", label: "Contact" },
-        { key: "email", label: "Email" },
-        { key: "phone", label: "Phone" },
-      ]} onEdit={(r) => { setEditing(r); setOpen(true); }} onDelete={(r) => remove.mutate(r.id)} />
+      <DataTable
+        rows={list.data ?? []}
+        columns={[
+          { key: "name", label: "Supplier" },
+          { key: "contact_name", label: "Contact" },
+          { key: "email", label: "Email" },
+          { key: "phone", label: "Phone" },
+        ]}
+        onEdit={(r) => {
+          setEditing(r);
+          setOpen(true);
+        }}
+        onDelete={(r) => remove.mutate(r.id)}
+      />
     </div>
   );
 }

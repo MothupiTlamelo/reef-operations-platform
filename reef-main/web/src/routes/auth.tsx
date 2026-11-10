@@ -6,7 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { Mountain, Users, Building2, Gauge } from "lucide-react";
 
@@ -40,7 +46,10 @@ export const Route = createFileRoute("/auth")({
   head: () => ({
     meta: [
       { title: "Sign in — Reef Ops" },
-      { name: "description", content: "Sign in to Reef Energy Engineering Fuels operations platform." },
+      {
+        name: "description",
+        content: "Sign in to Reef Energy Engineering Fuels operations platform.",
+      },
     ],
   }),
   component: AuthPage,
@@ -157,8 +166,8 @@ export function AuthPage() {
             className="text-sm text-white/70 leading-relaxed max-w-sm normal-case tracking-normal"
             style={{ fontFamily: "var(--font-sans)" }}
           >
-            The operations platform for Resource Energy Engineering Fuels — maintenance,
-            magnetite, tonnage and rand-per-ton, live across every contract mine.
+            The operations platform for Resource Energy Engineering Fuels — maintenance, magnetite,
+            tonnage and rand-per-ton, live across every contract mine.
           </p>
         </div>
 
@@ -246,9 +255,7 @@ export function AuthPage() {
               </span>
               <div className="h-px flex-1 bg-primary/20" />
             </div>
-            <CardTitle className="text-display text-3xl text-center">
-              Sign in to Reef Ops
-            </CardTitle>
+            <CardTitle className="text-display text-3xl text-center">Sign in to Reef Ops</CardTitle>
             <CardDescription className="text-center text-xs tracking-[0.15em] uppercase">
               Authorised personnel only
             </CardDescription>
@@ -378,10 +385,7 @@ export function AuthPage() {
             {/* mobile stat strip */}
             <div className="lg:hidden mt-6 grid grid-cols-4 border-t border-l border-primary/15">
               {STATS.map(({ value, label }) => (
-                <div
-                  key={label}
-                  className="border-b border-r border-primary/15 py-3 text-center"
-                >
+                <div key={label} className="border-b border-r border-primary/15 py-3 text-center">
                   <div className="num-mono text-base text-foreground">{value}</div>
                   <div className="text-[8px] tracking-[0.15em] uppercase text-muted-foreground mt-1">
                     {label}

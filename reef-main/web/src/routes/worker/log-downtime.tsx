@@ -3,7 +3,13 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useList } from "@/lib/reef-db";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { NumberField } from "@/components/NumberField";
 import { Textarea } from "@/components/ui/textarea";
@@ -67,38 +73,89 @@ function Page() {
       <div className="space-y-2">
         <Label htmlFor="log-downtime-mine">Mine</Label>
         <Select value={mineId} onValueChange={setMineId}>
-          <SelectTrigger id="log-downtime-mine" className="h-12 text-base"><SelectValue placeholder="Select mine" /></SelectTrigger>
-          <SelectContent>{mines.data?.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
+          <SelectTrigger id="log-downtime-mine" className="h-12 text-base">
+            <SelectValue placeholder="Select mine" />
+          </SelectTrigger>
+          <SelectContent>
+            {mines.data?.map((m: any) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="log-downtime-reason">Reason</Label>
         <Select value={reason} onValueChange={setReason}>
-          <SelectTrigger id="log-downtime-reason" className="h-12 text-base"><SelectValue /></SelectTrigger>
-          <SelectContent>{REASONS.map((r) => <SelectItem key={r.v} value={r.v}>{r.l}</SelectItem>)}</SelectContent>
+          <SelectTrigger id="log-downtime-reason" className="h-12 text-base">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {REASONS.map((r) => (
+              <SelectItem key={r.v} value={r.v}>
+                {r.l}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="log-downtime-equipment-optional">Equipment (optional)</Label>
         <Select value={equipId} onValueChange={setEquipId}>
-          <SelectTrigger id="log-downtime-equipment-optional" className="h-12 text-base"><SelectValue placeholder="Optional" /></SelectTrigger>
-          <SelectContent>{equipment.data?.map((e: any) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}</SelectContent>
+          <SelectTrigger id="log-downtime-equipment-optional" className="h-12 text-base">
+            <SelectValue placeholder="Optional" />
+          </SelectTrigger>
+          <SelectContent>
+            {equipment.data?.map((e: any) => (
+              <SelectItem key={e.id} value={e.id}>
+                {e.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="log-downtime-duration-hours">Duration (hours)</Label>
-        <NumberField id="log-downtime-duration-hours" step="0.25" className="h-12 text-lg" value={hours} onValueChange={setHours} />
+        <NumberField
+          id="log-downtime-duration-hours"
+          step="0.25"
+          className="h-12 text-lg"
+          value={hours}
+          onValueChange={setHours}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="log-downtime-notes-optional">Notes (optional)</Label>
-        <Textarea id="log-downtime-notes-optional" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+        <Textarea
+          id="log-downtime-notes-optional"
+          rows={2}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="log-downtime-photos-optional" className="flex items-center gap-2"><Camera className="w-4 h-4" />Photos (optional)</Label>
-        <Input id="log-downtime-photos-optional" type="file" accept="image/*" capture="environment" multiple onChange={(e) => setPhotos(e.target.files)} />
-        {photos && <p className="text-xs text-muted-foreground">{photos.length} photo(s) selected</p>}
+        <Label htmlFor="log-downtime-photos-optional" className="flex items-center gap-2">
+          <Camera className="w-4 h-4" />
+          Photos (optional)
+        </Label>
+        <Input
+          id="log-downtime-photos-optional"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          multiple
+          onChange={(e) => setPhotos(e.target.files)}
+        />
+        {photos && (
+          <p className="text-xs text-muted-foreground">{photos.length} photo(s) selected</p>
+        )}
       </div>
-      <Button className="w-full h-14 text-base" onClick={() => once(() => submit.mutateAsync()).catch(() => {})} disabled={submit.isPending}>
+      <Button
+        className="w-full h-14 text-base"
+        onClick={() => once(() => submit.mutateAsync()).catch(() => {})}
+        disabled={submit.isPending}
+      >
         {submit.isPending ? "Saving…" : "Save Downtime"}
       </Button>
     </div>

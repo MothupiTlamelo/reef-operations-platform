@@ -135,7 +135,9 @@ describe("T19: the list refreshes without a page load", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
     });
-    const invalidateSpy = vi.spyOn(client, "invalidateQueries").mockImplementation(() => Promise.resolve());
+    const invalidateSpy = vi
+      .spyOn(client, "invalidateQueries")
+      .mockImplementation(() => Promise.resolve());
 
     mockFrom.mockReturnValue({
       delete: () => ({

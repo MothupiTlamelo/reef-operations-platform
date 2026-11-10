@@ -4,11 +4,22 @@ import { toast } from "sonner";
 import { api, apiListAll, ApiRequestError } from "@/lib/api";
 
 export type TableName =
-  | "clients" | "mines" | "equipment" | "suppliers"
-  | "stock_items" | "purchase_orders" | "po_lines"
-  | "maintenance_logs" | "maintenance_parts"
-  | "production_logs" | "static_costs" | "downtime_events"
-  | "employees" | "attendance" | "employee_transfers" | "fuel_slips"
+  | "clients"
+  | "mines"
+  | "equipment"
+  | "suppliers"
+  | "stock_items"
+  | "purchase_orders"
+  | "po_lines"
+  | "maintenance_logs"
+  | "maintenance_parts"
+  | "production_logs"
+  | "static_costs"
+  | "downtime_events"
+  | "employees"
+  | "attendance"
+  | "employee_transfers"
+  | "fuel_slips"
   | "worker_purchases";
 
 /**
@@ -69,14 +80,10 @@ export function useList<T = any>(
       }
       let q = supabase.from(table as any).select("*");
       if (isDateOrdered && days > 0) {
-        const since = new Date(Date.now() - days * 864e5)
-          .toISOString()
-          .slice(0, 10);
+        const since = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
         q = q.gte(orderBy, since);
       }
-      const { data, error } = await q
-        .order(orderBy, { ascending: asc })
-        .limit(limit);
+      const { data, error } = await q.order(orderBy, { ascending: asc }).limit(limit);
       if (error) throw error;
       return (data ?? []) as T[];
     },
@@ -97,14 +104,23 @@ export function useUpsert(table: TableName, opts: { showsConflicts?: boolean } =
       // (a downtime cause, a transfer's reason).
       const { changeReason, ...fields } = row;
       if (path) {
-        const body = Object.fromEntries(Object.entries(fields).filter(([k]) => !SERVER_FIELDS.includes(k)));
+        const body = Object.fromEntries(
+          Object.entries(fields).filter(([k]) => !SERVER_FIELDS.includes(k)),
+        );
         const res = row.id
-          ? await api(`${path}/${row.id}`, { method: "PATCH", body: JSON.stringify({ ...body, reason: changeReason }) })
+          ? await api(`${path}/${row.id}`, {
+              method: "PATCH",
+              body: JSON.stringify({ ...body, reason: changeReason }),
+            })
           : await api(path, { method: "POST", body: JSON.stringify(body) });
         return res.data;
       }
       // Tables still read straight from Supabase have no history yet, so the reason stops here.
-      const { data, error } = await supabase.from(table as any).upsert(fields).select().single();
+      const { data, error } = await supabase
+        .from(table as any)
+        .upsert(fields)
+        .select()
+        .single();
       if (error) throw error;
       return data;
     },
@@ -129,7 +145,10 @@ export function useRemove(table: TableName) {
         await api(`${path}/${id}`, { method: "DELETE" });
         return;
       }
-      const { error } = await supabase.from(table as any).delete().eq("id", id);
+      const { error } = await supabase
+        .from(table as any)
+        .delete()
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -141,10 +160,15 @@ export function useRemove(table: TableName) {
 }
 
 export const ZAR = (n: number | null | undefined) =>
-  new Intl.NumberFormat("en-ZA", { style: "currency", currency: "ZAR", maximumFractionDigits: 0 }).format(Number(n ?? 0));
+  new Intl.NumberFormat("en-ZA", {
+    style: "currency",
+    currency: "ZAR",
+    maximumFractionDigits: 0,
+  }).format(Number(n ?? 0));
 
 /** Rand per ton, or "No production" when nothing was produced, never a misleading R0. */
-export const RPT = (n: number | null | undefined) => (n === null || n === undefined ? "No production" : ZAR(n));
+export const RPT = (n: number | null | undefined) =>
+  n === null || n === undefined ? "No production" : ZAR(n);
 
 export const NUM = (n: number | null | undefined) =>
   new Intl.NumberFormat("en-ZA", { maximumFractionDigits: 2 }).format(Number(n ?? 0));
