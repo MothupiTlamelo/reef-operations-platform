@@ -1,5 +1,5 @@
 
-            import { createFileRoute } from "@tanstack/react-router";
+ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   Activity,
@@ -37,6 +37,7 @@ export const Route = createFileRoute("/_authenticated/sentinel")({ component: Se
 
 type RiskFilter = "All" | RiskLevel;
 type CategoryFilter = "All" | SentinelRisk["category"];
+type RiskSort = "score" | "newest" | "oldest" | "title";
 
 const riskTone: Record<RiskLevel, { badge: "destructive" | "secondary" | "default"; dot: string; bar: string; label: string }> = {
   High: { badge: "destructive", dot: "bg-red-500", bar: "bg-red-500", label: "Critical attention" },
@@ -124,6 +125,7 @@ function ScoreBlock({ risk }: { risk: SentinelRisk }) {
 
 function RiskRow({ risk, onOpen }: { risk: SentinelRisk; onOpen: (risk: SentinelRisk) => void }) {
   const Icon = categoryIcon[risk.category];
+
   return (
     <button
       type="button"
@@ -167,6 +169,7 @@ function ExposureBars({ risks }: { risks: SentinelRisk[] }) {
     <div className="space-y-4">
       {counts.map(({ category, count, high }) => {
         const Icon = categoryIcon[category];
+
         return (
           <div key={category} className="space-y-2">
             <div className="flex items-center justify-between gap-3 text-xs">
@@ -193,6 +196,7 @@ function RiskMatrix({ risks, onCellSelect }: { risks: SentinelRisk[]; onCellSele
     const count = risks.filter((risk) => risk.likelihood === likelihood && risk.impact === impact).length;
     const score = likelihood * impact;
     const tone = score >= 15 ? "bg-red-500/20 text-red-300 border-red-500/20" : score >= 6 ? "bg-amber-400/15 text-amber-300 border-amber-400/20" : "bg-emerald-500/10 text-emerald-300 border-emerald-500/15";
+
     return { likelihood, impact, count, tone };
   });
 
@@ -328,6 +332,7 @@ function SentinelPage() {
   const [tab, setTab] = useState("overview");
   const [riskFilter, setRiskFilter] = useState<RiskFilter>("All");
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("All");
+  const [riskSort, setRiskSort] = useState<RiskSort>("score");
   const [query, setQuery] = useState("");
   const [selectedRisk, setSelectedRisk] = useState<SentinelRisk | null>(null);
 
@@ -349,21 +354,72 @@ function SentinelPage() {
   const sourceCount = [equipment.data, maintenance.data, stock.data, downtime.data, production.data].filter((rows) => Array.isArray(rows)).length;
   const totalRecords = [equipment.data, maintenance.data, stock.data, downtime.data, production.data].reduce((sum, rows) => sum + (rows?.length ?? 0), 0);
 
-  const filteredRisks = useMemo(() => risks.filter((risk) => {
-    const matchesLevel = riskFilter === "All" || risk.level === riskFilter;
-    const matchesCategory = categoryFilter === "All" || risk.category === categoryFilter;
-    const searchText = `${risk.title} ${risk.asset} ${risk.evidence} ${risk.category}`.toLowerCase();
-    return matchesLevel && matchesCategory && searchText.includes(query.toLowerCase().trim());
-  }), [risks, riskFilter, categoryFilter, query]);
+  // Filter and sort the register without mutating the original risk collection.
+  const filteredRisks = useMemo(() => {
+    const normalizedQuery = query.trim().toLocaleLowerCase();
+
+    const matchingRisks = risks.filter((risk) => {
+      const matchesLevel = riskFilter === "All" || risk.level === riskFilter;
+      const matchesCategory = categoryFilter === "All" || risk.category === categoryFilter;
+
+      const searchableFields = [
+        risk.title,
+        risk.asset,
+        risk.evidence,
+        risk.category,
+        risk.recommendedAction,
+      ];
+
+      const searchText = searchableFields.filter(Boolean).join(" ").toLocaleLowerCase();
+
+      return matchesLevel && matchesCategory && (!normalizedQuery || searchText.includes(normalizedQuery));
+    });
+
+    return [...matchingRisks].sort((a, b) => {
+      if (riskSort === "newest" || riskSort === "oldest") {
+        const aTime = new Date(a.detectedAt).getTime();
+        const bTime = new Date(b.detectedAt).getTime();
+        const safeATime = Number.isNaN(aTime) ? 0 : aTime;
+        const safeBTime = Number.isNaN(bTime) ? 0 : bTime;
+
+        return riskSort === "newest" ? safeBTime - safeATime : safeATime - safeBTime;
+      }
+
+      if (riskSort === "title") {
+        return a.title.localeCompare(b.title, "en", { sensitivity: "base" });
+      }
+
+      return b.score - a.score || a.title.localeCompare(b.title, "en", { sensitivity: "base" });
+    });
+  }, [risks, riskFilter, categoryFilter, riskSort, query]);
+
+  const hasActiveFilters = query.trim().length > 0 || riskFilter !== "All" || categoryFilter !== "All";
+
+  const clearRegisterFilters = () => {
+    setQuery("");
+    setRiskFilter("All");
+    setCategoryFilter("All");
+    setRiskSort("score");
+  };
 
   const priorityRisks = risks.filter((risk) => risk.level === "High").slice(0, 4);
+
   const refreshAll = () => {
-    void Promise.all([equipment.refetch(), maintenance.refetch(), stock.refetch(), downtime.refetch(), production.refetch(), mines.refetch()]);
+    void Promise.all([
+      equipment.refetch(),
+      maintenance.refetch(),
+      stock.refetch(),
+      downtime.refetch(),
+      production.refetch(),
+      mines.refetch(),
+    ]);
   };
 
   const inspectMatrixCell = (likelihood: number, impact: number) => {
     const match = risks.find((risk) => risk.likelihood === likelihood && risk.impact === impact);
+
     if (match) setSelectedRisk(match);
+
     setRiskFilter("All");
     setCategoryFilter("All");
     setQuery("");
@@ -386,53 +442,91 @@ function SentinelPage() {
       <section className="relative overflow-hidden rounded-2xl border border-slate-700/70 bg-[#101a20] text-white shadow-xl">
         <div className="pointer-events-none absolute -right-20 -top-28 h-80 w-80 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-36 left-[28%] h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" />
+
         <div className="relative grid gap-6 p-5 sm:p-7 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
-              <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" /></span>
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
               Intelligence layer active
             </div>
+
             <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-amber-300/80">R.E.E.F / Sentinel systems</p>
-            <h2 className="mt-2 max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">See the risk before it becomes <span className="text-amber-300">downtime.</span></h2>
-            <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-300">A unified operational view across equipment health, maintenance, inventory, downtime and production signals.</p>
+            <h2 className="mt-2 max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+              See the risk before it becomes <span className="text-amber-300">downtime.</span>
+            </h2>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-slate-300">
+              A unified operational view across equipment health, maintenance, inventory, downtime and production signals.
+            </p>
+
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <Button onClick={() => setTab("register")} className="gap-2 bg-amber-400 text-slate-950 hover:bg-amber-300"><Crosshair className="h-4 w-4" /> Explore risk register</Button>
-              <span className="text-xs text-slate-400">{loading ? "Scanning operational records…" : `${totalRecords.toLocaleString("en-ZA")} records in the current assessment`}</span>
+              <Button onClick={() => setTab("register")} className="gap-2 bg-amber-400 text-slate-950 hover:bg-amber-300">
+                <Crosshair className="h-4 w-4" /> Explore risk register
+              </Button>
+              <span className="text-xs text-slate-400">
+                {loading ? "Scanning operational records…" : `${totalRecords.toLocaleString("en-ZA")} records in the current assessment`}
+              </span>
             </div>
           </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-white/10 bg-white/[0.04] p-4 backdrop-blur-sm">
-              <div className="flex items-center justify-between text-slate-400"><span className="text-[10px] uppercase tracking-[0.16em]">Total findings</span><Activity className="h-4 w-4" /></div>
+              <div className="flex items-center justify-between text-slate-400">
+                <span className="text-[10px] uppercase tracking-[0.16em]">Total findings</span>
+                <Activity className="h-4 w-4" />
+              </div>
               <p className="mt-3 text-4xl font-semibold tabular-nums">{loading ? "—" : risks.length}</p>
               <p className="mt-1 text-[11px] text-slate-400">Across available signals</p>
             </div>
+
             <div className="rounded-xl border border-red-400/20 bg-red-500/[0.08] p-4">
-              <div className="flex items-center justify-between text-red-200/80"><span className="text-[10px] uppercase tracking-[0.16em]">High priority</span><Siren className="h-4 w-4" /></div>
+              <div className="flex items-center justify-between text-red-200/80">
+                <span className="text-[10px] uppercase tracking-[0.16em]">High priority</span>
+                <Siren className="h-4 w-4" />
+              </div>
               <p className="mt-3 text-4xl font-semibold tabular-nums text-red-200">{loading ? "—" : high}</p>
               <p className="mt-1 text-[11px] text-red-100/60">Require prompt review</p>
             </div>
+
             <div className="rounded-xl border border-amber-300/20 bg-amber-300/[0.07] p-4">
-              <div className="flex items-center justify-between text-amber-100/70"><span className="text-[10px] uppercase tracking-[0.16em]">Medium priority</span><AlertTriangle className="h-4 w-4" /></div>
+              <div className="flex items-center justify-between text-amber-100/70">
+                <span className="text-[10px] uppercase tracking-[0.16em]">Medium priority</span>
+                <AlertTriangle className="h-4 w-4" />
+              </div>
               <p className="mt-3 text-3xl font-semibold tabular-nums text-amber-100">{loading ? "—" : medium}</p>
               <p className="mt-1 text-[11px] text-amber-100/60">Plan an intervention</p>
             </div>
+
             <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.06] p-4">
-              <div className="flex items-center justify-between text-emerald-100/70"><span className="text-[10px] uppercase tracking-[0.16em]">Low priority</span><ShieldCheck className="h-4 w-4" /></div>
+              <div className="flex items-center justify-between text-emerald-100/70">
+                <span className="text-[10px] uppercase tracking-[0.16em]">Low priority</span>
+                <ShieldCheck className="h-4 w-4" />
+              </div>
               <p className="mt-3 text-3xl font-semibold tabular-nums text-emerald-100">{loading ? "—" : low}</p>
               <p className="mt-1 text-[11px] text-emerald-100/60">Continue monitoring</p>
             </div>
           </div>
         </div>
+
         <div className="relative flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-black/10 px-5 py-3 text-[10px] text-slate-400 sm:px-7">
-          <span className="inline-flex items-center gap-2"><Database className="h-3.5 w-3.5 text-emerald-300" /> {sourceCount}/5 operational data streams available</span>
-          <span className="inline-flex items-center gap-2"><Clock3 className="h-3.5 w-3.5" /> Assessment recalculates from current records</span>
+          <span className="inline-flex items-center gap-2">
+            <Database className="h-3.5 w-3.5 text-emerald-300" /> {sourceCount}/5 operational data streams available
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <Clock3 className="h-3.5 w-3.5" /> Assessment recalculates from current records
+          </span>
         </div>
       </section>
 
       {failed && (
         <div className="flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/5 p-4 text-sm">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-          <div><p className="font-semibold">Some operational data could not be loaded.</p><p className="mt-1 text-xs text-muted-foreground">Refresh the assessment. Findings may be incomplete until all source records are available.</p></div>
+          <div>
+            <p className="font-semibold">Some operational data could not be loaded.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Refresh the assessment. Findings may be incomplete until all source records are available.</p>
+          </div>
         </div>
       )}
 
@@ -449,10 +543,17 @@ function SentinelPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Sentinel workspace</p>
             <h3 className="mt-1 text-lg font-semibold tracking-tight">Operational intelligence</h3>
           </div>
+
           <TabsList className="grid h-auto w-full grid-cols-3 rounded-xl bg-muted/70 p-1 sm:w-auto">
-            <TabsTrigger value="overview" className="gap-2 rounded-lg px-3 py-2 text-xs"><Gauge className="hidden h-3.5 w-3.5 sm:block" />Overview</TabsTrigger>
-            <TabsTrigger value="register" className="gap-2 rounded-lg px-3 py-2 text-xs"><ClipboardList className="hidden h-3.5 w-3.5 sm:block" />Risk register</TabsTrigger>
-            <TabsTrigger value="response" className="gap-2 rounded-lg px-3 py-2 text-xs"><Target className="hidden h-3.5 w-3.5 sm:block" />Response centre</TabsTrigger>
+            <TabsTrigger value="overview" className="gap-2 rounded-lg px-3 py-2 text-xs">
+              <Gauge className="hidden h-3.5 w-3.5 sm:block" />Overview
+            </TabsTrigger>
+            <TabsTrigger value="register" className="gap-2 rounded-lg px-3 py-2 text-xs">
+              <ClipboardList className="hidden h-3.5 w-3.5 sm:block" />Risk register
+            </TabsTrigger>
+            <TabsTrigger value="response" className="gap-2 rounded-lg px-3 py-2 text-xs">
+              <Target className="hidden h-3.5 w-3.5 sm:block" />Response centre
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -460,27 +561,54 @@ function SentinelPage() {
           <div className="grid gap-5 xl:grid-cols-[1.25fr_0.75fr]">
             <Card className="border-border/70">
               <CardHeader className="pb-4">
-                <div className="flex items-start justify-between gap-3"><div><CardTitle className="text-base">Operational exposure profile</CardTitle><CardDescription className="mt-1">Where Sentinel is detecting current risk signals.</CardDescription></div><Badge variant="outline">{risks.length} total</Badge></div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <CardTitle className="text-base">Operational exposure profile</CardTitle>
+                    <CardDescription className="mt-1">Where Sentinel is detecting current risk signals.</CardDescription>
+                  </div>
+                  <Badge variant="outline">{risks.length} total</Badge>
+                </div>
               </CardHeader>
               <CardContent><ExposureBars risks={risks} /></CardContent>
             </Card>
+
             <Card className="border-border/70">
-              <CardHeader className="pb-3"><CardTitle className="text-base">Risk matrix</CardTitle><CardDescription>Likelihood × impact · Select a populated cell to investigate.</CardDescription></CardHeader>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Risk matrix</CardTitle>
+                <CardDescription>Likelihood × impact · Select a populated cell to investigate.</CardDescription>
+              </CardHeader>
               <CardContent>
                 <RiskMatrix risks={risks} onCellSelect={inspectMatrixCell} />
-                <div className="mt-4 flex flex-wrap gap-3 text-[10px] text-muted-foreground"><span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-sm bg-emerald-500" />Low</span><span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-sm bg-amber-400" />Medium</span><span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-sm bg-red-500" />High</span></div>
+                <div className="mt-4 flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-sm bg-emerald-500" />Low</span>
+                  <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-sm bg-amber-400" />Medium</span>
+                  <span className="flex items-center gap-1.5"><i className="h-2 w-2 rounded-sm bg-red-500" />High</span>
+                </div>
               </CardContent>
             </Card>
           </div>
 
           <Card className="border-border/70">
             <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-              <div><CardTitle className="text-base">Priority watchlist</CardTitle><CardDescription className="mt-1">Highest-severity findings requiring management attention.</CardDescription></div>
-              <Button variant="ghost" size="sm" onClick={() => setTab("register")} className="shrink-0 gap-1 text-xs">Full register <ChevronRight className="h-3.5 w-3.5" /></Button>
+              <div>
+                <CardTitle className="text-base">Priority watchlist</CardTitle>
+                <CardDescription className="mt-1">Highest-severity findings requiring management attention.</CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setTab("register")} className="shrink-0 gap-1 text-xs">
+                Full register <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
             </CardHeader>
             <CardContent className="space-y-3">
-              {loading ? <p className="py-8 text-center text-sm text-muted-foreground">Analysing operational signals…</p> : priorityRisks.length ? priorityRisks.map((risk) => <RiskRow key={risk.id} risk={risk} onOpen={setSelectedRisk} />) : (
-                <div className="rounded-xl border border-dashed border-border p-8 text-center"><ShieldCheck className="mx-auto h-8 w-8 text-emerald-500" /><p className="mt-3 font-semibold">No high-priority findings</p><p className="mt-1 text-xs text-muted-foreground">Sentinel has not identified any high-severity risks in the available records.</p></div>
+              {loading ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Analysing operational signals…</p>
+              ) : priorityRisks.length ? (
+                priorityRisks.map((risk) => <RiskRow key={risk.id} risk={risk} onOpen={setSelectedRisk} />)
+              ) : (
+                <div className="rounded-xl border border-dashed border-border p-8 text-center">
+                  <ShieldCheck className="mx-auto h-8 w-8 text-emerald-500" />
+                  <p className="mt-3 font-semibold">No high-priority findings</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Sentinel has not identified any high-severity risks in the available records.</p>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -489,17 +617,100 @@ function SentinelPage() {
         <TabsContent value="register" className="mt-0 space-y-4">
           <Card className="border-border/70">
             <CardHeader className="gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
-              <div><CardTitle className="text-base">Risk register</CardTitle><CardDescription className="mt-1">Search, filter and investigate explainable operational findings.</CardDescription></div>
+              <div>
+                <CardTitle className="text-base">Risk register</CardTitle>
+                <CardDescription className="mt-1">Search, filter, sort and investigate explainable operational findings.</CardDescription>
+              </div>
               <Badge variant="outline" className="w-fit tabular-nums">{filteredRisks.length} / {risks.length} findings</Badge>
             </CardHeader>
+
             <CardContent className="space-y-4">
-              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_170px_180px]">
-                <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search risks, assets or evidence…" className="pl-9" /></div>
-                <Select value={riskFilter} onValueChange={(value) => setRiskFilter(value as RiskFilter)}><SelectTrigger><Filter className="mr-2 h-3.5 w-3.5 text-muted-foreground" /><SelectValue placeholder="Severity" /></SelectTrigger><SelectContent><SelectItem value="All">All severities</SelectItem><SelectItem value="High">High</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Low">Low</SelectItem></SelectContent></Select>
-                <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}><SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger><SelectContent><SelectItem value="All">All categories</SelectItem><SelectItem value="Equipment">Equipment</SelectItem><SelectItem value="Maintenance">Maintenance</SelectItem><SelectItem value="Inventory">Inventory</SelectItem><SelectItem value="Downtime">Downtime</SelectItem><SelectItem value="Production">Production</SelectItem></SelectContent></Select>
+              <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_150px_170px_170px]">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search title, asset, evidence or action…"
+                    className="pl-9"
+                  />
+                </div>
+
+                <Select value={riskFilter} onValueChange={(value) => setRiskFilter(value as RiskFilter)}>
+                  <SelectTrigger>
+                    <Filter className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+                    <SelectValue placeholder="Severity" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All severities</SelectItem>
+                    <SelectItem value="High">High</SelectItem>
+                    <SelectItem value="Medium">Medium</SelectItem>
+                    <SelectItem value="Low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={categoryFilter} onValueChange={(value) => setCategoryFilter(value as CategoryFilter)}>
+                  <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All">All categories</SelectItem>
+                    <SelectItem value="Equipment">Equipment</SelectItem>
+                    <SelectItem value="Maintenance">Maintenance</SelectItem>
+                    <SelectItem value="Inventory">Inventory</SelectItem>
+                    <SelectItem value="Downtime">Downtime</SelectItem>
+                    <SelectItem value="Production">Production</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={riskSort} onValueChange={(value) => setRiskSort(value as RiskSort)}>
+                  <SelectTrigger><SelectValue placeholder="Sort findings" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="score">Highest score</SelectItem>
+                    <SelectItem value="newest">Newest first</SelectItem>
+                    <SelectItem value="oldest">Oldest first</SelectItem>
+                    <SelectItem value="title">Title A–Z</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              {loading ? <div className="py-12 text-center text-sm text-muted-foreground">Scanning equipment, maintenance, inventory, downtime and production…</div> : filteredRisks.length ? <div className="space-y-3">{filteredRisks.map((risk) => <RiskRow key={risk.id} risk={risk} onOpen={setSelectedRisk} />)}</div> : (
-                <div className="rounded-xl border border-dashed border-border p-10 text-center"><Search className="mx-auto h-8 w-8 text-muted-foreground" /><p className="mt-3 font-semibold">No matching findings</p><p className="mt-1 text-xs text-muted-foreground">Adjust your search or filters to see other risks.</p><Button variant="ghost" size="sm" className="mt-3" onClick={() => { setQuery(""); setRiskFilter("All"); setCategoryFilter("All"); }}>Clear filters</Button></div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+                <p className="text-xs text-muted-foreground">
+                  Showing <span className="font-semibold tabular-nums text-foreground">{filteredRisks.length}</span> of{" "}
+                  <span className="font-semibold tabular-nums text-foreground">{risks.length}</span> findings
+                </p>
+
+                <div className="flex items-center gap-2">
+                  {hasActiveFilters && <Badge variant="secondary">Filters active</Badge>}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearRegisterFilters}
+                    disabled={!hasActiveFilters && riskSort === "score"}
+                    className="h-7 px-2 text-xs"
+                  >
+                    Reset
+                  </Button>
+                </div>
+              </div>
+
+              {loading ? (
+                <div className="py-12 text-center text-sm text-muted-foreground">
+                  Scanning equipment, maintenance, inventory, downtime and production…
+                </div>
+              ) : filteredRisks.length ? (
+                <div className="space-y-3">
+                  {filteredRisks.map((risk) => (
+                    <RiskRow key={risk.id} risk={risk} onOpen={setSelectedRisk} />
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border p-10 text-center">
+                  <Search className="mx-auto h-8 w-8 text-muted-foreground" />
+                  <p className="mt-3 font-semibold">No matching findings</p>
+                  <p className="mt-1 text-xs text-muted-foreground">No risks match the current search and filter combination.</p>
+                  <Button variant="ghost" size="sm" className="mt-3" onClick={clearRegisterFilters}>
+                    Reset register
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -511,19 +722,50 @@ function SentinelPage() {
             <MetricCard label="Plan intervention" value={medium} detail="Medium-severity findings" icon={ClipboardList} accent="amber" />
             <MetricCard label="Monitor" value={low} detail="Low-severity findings" icon={CircleDot} accent="green" />
           </div>
+
           <Card className="border-border/70">
-            <CardHeader><CardTitle className="text-base">Recommended response queue</CardTitle><CardDescription>Suggested next steps generated from the evidence attached to each finding. These are not automatically assigned or marked complete.</CardDescription></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">Recommended response queue</CardTitle>
+              <CardDescription>Suggested next steps generated from the evidence attached to each finding. These are not automatically assigned or marked complete.</CardDescription>
+            </CardHeader>
             <CardContent className="space-y-3">
-              {loading ? <p className="py-8 text-center text-sm text-muted-foreground">Preparing response queue…</p> : risks.length ? [...risks].sort((a, b) => b.score - a.score).map((risk, index) => (
-                <div key={risk.id} className="flex flex-col gap-3 rounded-xl border border-border/70 p-4 sm:flex-row sm:items-start">
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold tabular-nums text-muted-foreground">{String(index + 1).padStart(2, "0")}</div>
-                  <div className="min-w-0 flex-1"><div className="mb-1.5 flex flex-wrap items-center gap-2"><RiskPill level={risk.level} /><span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{risk.category}</span></div><p className="text-sm font-semibold">{risk.asset} · {risk.title}</p><p className="mt-2 text-xs leading-relaxed text-muted-foreground">{risk.recommendedAction}</p></div>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedRisk(risk)} className="shrink-0 gap-1.5">Review <ChevronRight className="h-3.5 w-3.5" /></Button>
+              {loading ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Preparing response queue…</p>
+              ) : risks.length ? (
+                [...risks].sort((a, b) => b.score - a.score).map((risk, index) => (
+                  <div key={risk.id} className="flex flex-col gap-3 rounded-xl border border-border/70 p-4 sm:flex-row sm:items-start">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold tabular-nums text-muted-foreground">
+                      {String(index + 1).padStart(2, "0")}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                        <RiskPill level={risk.level} />
+                        <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{risk.category}</span>
+                      </div>
+                      <p className="text-sm font-semibold">{risk.asset} · {risk.title}</p>
+                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{risk.recommendedAction}</p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedRisk(risk)} className="shrink-0 gap-1.5">
+                      Review <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <div className="py-10 text-center">
+                  <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-500" />
+                  <p className="mt-3 font-semibold">No response actions generated</p>
+                  <p className="mt-1 text-xs text-muted-foreground">No risk findings are currently available from the loaded records.</p>
                 </div>
-              )) : <div className="py-10 text-center"><CheckCircle2 className="mx-auto h-8 w-8 text-emerald-500" /><p className="mt-3 font-semibold">No response actions generated</p><p className="mt-1 text-xs text-muted-foreground">No risk findings are currently available from the loaded records.</p></div>}
+              )}
             </CardContent>
           </Card>
-          <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-4 text-xs leading-relaxed text-muted-foreground"><div className="mb-1 flex items-center gap-2 font-semibold text-foreground"><AlertTriangle className="h-4 w-4 text-amber-500" /> Operational control principle</div>Sentinel recommends and explains. Authorised REEF users remain responsible for approving maintenance, purchasing and operational changes through the existing workflows.</div>
+
+          <div className="rounded-xl border border-amber-400/20 bg-amber-400/5 p-4 text-xs leading-relaxed text-muted-foreground">
+            <div className="mb-1 flex items-center gap-2 font-semibold text-foreground">
+              <AlertTriangle className="h-4 w-4 text-amber-500" /> Operational control principle
+            </div>
+            Sentinel recommends and explains. Authorised REEF users remain responsible for approving maintenance, purchasing and operational changes through the existing workflows.
+          </div>
         </TabsContent>
       </Tabs>
 
