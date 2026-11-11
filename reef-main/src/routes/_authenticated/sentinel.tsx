@@ -1,5 +1,5 @@
 
-import { createFileRoute } from "@tanstack/react-router";
+            import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   Activity,
@@ -229,31 +229,89 @@ function RiskMatrix({ risks, onCellSelect }: { risks: SentinelRisk[]; onCellSele
 
 function RiskDetail({ risk, onClose }: { risk: SentinelRisk | null; onClose: () => void }) {
   if (!risk) return null;
+
   const Icon = categoryIcon[risk.category];
+  const likelihoodPercent = Math.max(0, Math.min(100, (risk.likelihood / 5) * 100));
+  const impactPercent = Math.max(0, Math.min(100, (risk.impact / 5) * 100));
+  const calculatedScore = risk.likelihood * risk.impact;
+  const scoreMatches = calculatedScore === risk.score;
+
   return (
     <Dialog open={Boolean(risk)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[88vh] max-w-2xl overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <div className="mb-2 flex flex-wrap items-center gap-2"><RiskPill level={risk.level} /><Badge variant="outline">{risk.category}</Badge></div>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <RiskPill level={risk.level} />
+            <Badge variant="outline">{risk.category}</Badge>
+          </div>
           <DialogTitle className="pr-7 text-xl">{risk.title}</DialogTitle>
-          <DialogDescription>{risk.asset} · Detected {formatTime(risk.detectedAt)}</DialogDescription>
+          <DialogDescription>
+            {risk.asset} · Detected {formatTime(risk.detectedAt)}
+          </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-3 sm:grid-cols-[1fr_150px]">
-          <div className="rounded-xl border border-border/70 bg-muted/30 p-4">
-            <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground"><Icon className="h-4 w-4" /> Risk evidence</div>
-            <p className="text-sm leading-relaxed">{risk.evidence}</p>
+
+        <section className="space-y-3">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+            <Icon className="h-4 w-4" /> Investigation evidence
           </div>
           <div className="rounded-xl border border-border/70 bg-muted/30 p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Risk score</p>
-            <p className="mt-2 text-4xl font-semibold tabular-nums">{risk.score}<span className="text-sm font-normal text-muted-foreground">/25</span></p>
-            <p className="mt-2 text-xs text-muted-foreground">Likelihood {risk.likelihood} · Impact {risk.impact}</p>
+            <p className="text-sm leading-relaxed">{risk.evidence || "No additional evidence was supplied for this finding."}</p>
           </div>
+          <p className="text-xs leading-relaxed text-muted-foreground">{categoryDescription[risk.category]}. Review the recorded evidence against the source operational records before approving any intervention.</p>
+        </section>
+
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">Risk assessment</h3>
+              <p className="text-xs text-muted-foreground">Likelihood × impact scoring</p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-muted/40 px-4 py-2 text-right">
+              <p className="text-3xl font-semibold tabular-nums">{risk.score}<span className="ml-1 text-xs font-normal text-muted-foreground">/25</span></p>
+              <p className="text-[10px] text-muted-foreground">{risk.level} priority</p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-border/70 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium">Likelihood</span>
+                <span className="text-sm font-semibold tabular-nums">{risk.likelihood}/5</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-amber-400" style={{ width: `${likelihoodPercent}%` }} />
+              </div>
+              <p className="mt-2 text-[10px] text-muted-foreground">Estimated chance or frequency of the event.</p>
+            </div>
+            <div className="rounded-xl border border-border/70 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-medium">Impact</span>
+                <span className="text-sm font-semibold tabular-nums">{risk.impact}/5</span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full bg-red-500" style={{ width: `${impactPercent}%` }} />
+              </div>
+              <p className="mt-2 text-[10px] text-muted-foreground">Potential operational consequence if it occurs.</p>
+            </div>
+          </div>
+
+          <div className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            Calculation: {risk.likelihood} × {risk.impact} = {calculatedScore}
+            {!scoreMatches ? ` · Displayed finding score: ${risk.score}` : " · Score verified"}
+          </div>
+        </section>
+
+        <section className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary">
+            <Target className="h-4 w-4" /> Recommended intervention
+          </div>
+          <p className="text-sm leading-relaxed">{risk.recommendedAction || "Review the source records and determine the appropriate operational response."}</p>
+        </section>
+
+        <div className="flex items-start gap-2 rounded-lg border border-border/70 p-3 text-[11px] leading-relaxed text-muted-foreground">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+          This investigation is read-only. Sentinel provides evidence-based recommendations; authorised REEF users remain responsible for verifying findings and approving maintenance, purchasing or operational changes.
         </div>
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-          <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary"><Target className="h-4 w-4" /> Recommended intervention</div>
-          <p className="text-sm leading-relaxed">{risk.recommendedAction}</p>
-        </div>
-        <p className="text-[11px] leading-relaxed text-muted-foreground">This is an explainable, read-only finding based on recorded operational data. It is a recommendation, not a completed work order or an automated change to your records.</p>
       </DialogContent>
     </Dialog>
   );
