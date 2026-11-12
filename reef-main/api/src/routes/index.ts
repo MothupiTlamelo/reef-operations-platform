@@ -1,3 +1,5 @@
+
+
 import type { Hono } from "hono";
 import { z } from "zod";
 import {
@@ -31,6 +33,7 @@ import { notificationRoutes } from "./notifications.js";
 import { resourceRoutes, scopedResourceRoutes } from "./resource.js";
 import { settingsRoutes } from "./settings.js";
 import { workerPurchasesRoutes } from "./worker-purchases.js";
+import { assessSentinelRisks } from "../services/sentinel-risk.js";
 
 const UserId = z.string().uuid();
 const SessionId = z.string().uuid();
@@ -124,7 +127,10 @@ export function registerRoutes(app: Hono<AppEnv>, registry: Registry) {
       const sessionId = parseWith(SessionId, c.req.param("sessionId"));
       const revoked = await c.var.repos.sessions.revoke(sessionId);
       if (!revoked) {
-        throw new ApiError("NOT_FOUND", "That sign-in does not exist or has already been revoked");
+        throw new ApiError(
+          "NOT_FOUND",
+          "That sign-in does not exist or has already been revoked",
+        );
       }
       return ok(c, { sessionId, revoked: true });
     },
@@ -227,6 +233,7 @@ export function registerRoutes(app: Hono<AppEnv>, registry: Registry) {
 
   dailyOpsRoutes(app, registry);
   purchasingRoutes(app, registry);
+
   scopedResourceRoutes(app, registry, {
     name: "stock",
     noun: "stock item",
@@ -286,6 +293,37 @@ export function registerRoutes(app: Hono<AppEnv>, registry: Registry) {
       remove: "Deletes a purchase order. Refuses if the caller cannot see it.",
     },
   });
+
+  defineRoute(
+    app,
+    registry,
+    {
+      method: "GET",
+      path: "/api/v1/sentinel/risks",
+      access: "stock:read",
+      summary:
+        "Returns operational risks identified by REEF Sentinel, including equipment lifespan, overdue maintenance and critical or low stock.",
+      refuses:
+        "Unauthenticated users and users without stock read permission.",
+    },
+    async (c) => {
+      const data = await c.var.repos.sentinel.assessData({
+        role: c.var.user.role ?? "",
+        plant: c.var.user.plant,
+      });
+
+      const risks = assessSentinelRisks({
+        ...data,
+        today: new Date().toISOString().slice(0, 10),
+      });
+
+      return ok(c, {
+        risks,
+        total: risks.length,
+        assessedAt: new Date().toISOString(),
+      });
+    },
+  );
 
   analyticsRoutes(app, registry);
   adminRoutes(app, registry);
