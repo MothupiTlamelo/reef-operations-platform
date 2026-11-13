@@ -1,24 +1,14 @@
-
- 
-
-
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { AlertTriangle, ArrowLeft, ShieldCheck } from "lucide-react";
 
-import { useList } from "@/lib/reef-db";
+import { useList, type Row } from "@/lib/reef-db";
 import { detectReefRisks } from "@/lib/reef-sentinel";
 import type { SentinelRisk } from "@/lib/reef-sentinel";
 import { PageHeader } from "@/components/PageHeader";
 import { SentinelResponseCentre } from "@/components/SentinelResponseCentre";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/sentinel")({
@@ -35,12 +25,12 @@ export const Route = createFileRoute("/_authenticated/sentinel")({
 });
 
 function SentinelPage() {
-  const equipment = useList<any>("equipment");
-  const maintenance = useList<any>("maintenance_logs");
-  const stock = useList<any>("stock_items");
-  const downtime = useList<any>("downtime_events");
-  const production = useList<any>("production_logs");
-  const mines = useList<any>("mines");
+  const equipment = useList<Row<"equipment">>("equipment");
+  const maintenance = useList<Row<"maintenance_logs">>("maintenance_logs");
+  const stock = useList<Row<"stock_items">>("stock_items");
+  const downtime = useList<Row<"downtime_events">>("downtime_events");
+  const production = useList<Row<"production_logs">>("production_logs");
+  const mines = useList<Row<"mines">>("mines");
 
   const risks: SentinelRisk[] = useMemo(
     () =>
@@ -52,27 +42,14 @@ function SentinelPage() {
         production: production.data ?? [],
         mines: mines.data ?? [],
       }),
-    [
-      equipment.data,
-      maintenance.data,
-      stock.data,
-      downtime.data,
-      production.data,
-      mines.data,
-    ],
+    [equipment.data, maintenance.data, stock.data, downtime.data, production.data, mines.data],
   );
 
   const high = risks.filter((risk) => risk.level === "High").length;
   const medium = risks.filter((risk) => risk.level === "Medium").length;
   const low = risks.filter((risk) => risk.level === "Low").length;
 
-  const categories = [
-    "Equipment",
-    "Maintenance",
-    "Inventory",
-    "Downtime",
-    "Production",
-  ] as const;
+  const categories = ["Equipment", "Maintenance", "Inventory", "Downtime", "Production"] as const;
 
   return (
     <div className="reef-fade-up space-y-6">
@@ -109,9 +86,7 @@ function SentinelPage() {
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {categories.map((category) => {
-              const count = risks.filter(
-                (risk) => risk.category === category,
-              ).length;
+              const count = risks.filter((risk) => risk.category === category).length;
 
               return (
                 <div key={category} className="rounded-lg border p-4">
@@ -133,9 +108,7 @@ function SentinelPage() {
             <ShieldCheck className="h-5 w-5" />
             Priority risk register
           </CardTitle>
-          <CardDescription>
-            Detected operational risks, ordered by risk score.
-          </CardDescription>
+          <CardDescription>Detected operational risks, ordered by risk score.</CardDescription>
         </CardHeader>
         <CardContent>
           {risks.length === 0 ? (
@@ -143,8 +116,7 @@ function SentinelPage() {
               <ShieldCheck className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
               <p className="font-medium">No risks currently detected</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Sentinel will display risks when operational records meet its
-                detection rules.
+                Sentinel will display risks when operational records meet its detection rules.
               </p>
             </div>
           ) : (
@@ -171,13 +143,9 @@ function SentinelPage() {
                     </div>
 
                     <h3 className="font-semibold">{risk.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {risk.asset}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{risk.asset}</p>
                     <p className="text-sm">{risk.evidence}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Risk score: {risk.score}/25
-                    </p>
+                    <p className="text-xs text-muted-foreground">Risk score: {risk.score}/25</p>
                     <p className="text-sm">
                       <span className="font-medium">Recommended action: </span>
                       {risk.recommendedAction}
@@ -199,13 +167,7 @@ function SentinelPage() {
   );
 }
 
-function StatCard({
-  title,
-  value,
-}: {
-  title: string;
-  value: number;
-}) {
+function StatCard({ title, value }: { title: string; value: number }) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -213,9 +175,7 @@ function StatCard({
         <CardTitle className="text-3xl">{value}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-xs text-muted-foreground">
-          Based on current operational records
-        </p>
+        <p className="text-xs text-muted-foreground">Based on current operational records</p>
       </CardContent>
     </Card>
   );

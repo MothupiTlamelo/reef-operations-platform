@@ -46,7 +46,7 @@ function Page() {
       toast.success("Usage logged");
       navigate({ to: "/worker" });
     },
-    onError: (e: any) => toast.error(e.message ?? "Failed"),
+    onError: (e: Error) => toast.error(e.message ?? "Failed"),
   });
 
   return (
@@ -59,7 +59,7 @@ function Page() {
             <SelectValue placeholder="Select item" />
           </SelectTrigger>
           <SelectContent>
-            {stock.data?.map((s: any) => (
+            {stock.data?.map((s) => (
               <SelectItem key={s.id} value={s.id}>
                 {s.name} · {NUM(s.qty_on_hand)} {s.unit ?? ""}
               </SelectItem>

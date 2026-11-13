@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useList, ZAR, NUM } from "@/lib/reef-db";
+import { useList, ZAR, NUM, type Row } from "@/lib/reef-db";
 import { api, ApiRequestError, fetchMe } from "@/lib/api";
 import {
   STOCK_KEY,
@@ -46,7 +46,7 @@ function Page() {
   const { item: linkedId } = useSearch({ strict: false }) as { item?: string };
   const me = useQuery({ queryKey: ["me"], queryFn: fetchMe, staleTime: 60_000 });
   const stock = useStockOnHand();
-  const suppliers = useList<any>("suppliers", "name", true);
+  const suppliers = useList<Row<"suppliers">>("suppliers", "name", true);
   const isOwner = me.data?.role === "owner";
 
   const [editing, setEditing] = useState<StockOnHand | null>(null);

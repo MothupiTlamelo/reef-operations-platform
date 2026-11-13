@@ -1,13 +1,6 @@
-
-
-
-
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ApiError } from "../http/errors.js";
-import type {
-  SentinelEquipment,
-  SentinelStockLevel,
-} from "../services/sentinel-risk.js";
+import type { SentinelEquipment, SentinelStockLevel } from "../services/sentinel-risk.js";
 import type { UserContext } from "./types.js";
 
 export type SentinelAssessmentData = {
@@ -101,8 +94,7 @@ export class SupabaseSentinelRepository implements SentinelRepository {
         equipmentQuery = equipmentQuery.in("mine_id", mineIds);
       }
 
-      const { data: equipmentRows, error: equipmentError } =
-        await equipmentQuery;
+      const { data: equipmentRows, error: equipmentError } = await equipmentQuery;
 
       if (equipmentError) failDatabase(equipmentError);
 
@@ -111,12 +103,11 @@ export class SupabaseSentinelRepository implements SentinelRepository {
       if (rows.length > 0) {
         const equipmentIds = rows.map((row) => row.id);
 
-        const { data: maintenanceRows, error: maintenanceError } =
-          await this.db
-            .from("maintenance_logs")
-            .select("equipment_id, date, next_due_date, next_due_tons")
-            .in("equipment_id", equipmentIds)
-            .order("date", { ascending: false });
+        const { data: maintenanceRows, error: maintenanceError } = await this.db
+          .from("maintenance_logs")
+          .select("equipment_id, date, next_due_date, next_due_tons")
+          .in("equipment_id", equipmentIds)
+          .order("date", { ascending: false });
 
         if (maintenanceError) failDatabase(maintenanceError);
 

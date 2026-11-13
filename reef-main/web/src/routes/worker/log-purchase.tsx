@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { useList } from "@/lib/reef-db";
+import { useList, type Row } from "@/lib/reef-db";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/worker/log-purchase")({ component: Page }
 const CATEGORIES = ["Parts", "Fuel", "Consumables", "Tools", "Other"] as const;
 
 function Page() {
-  const mines = useList<any>("mines", "name", true);
+  const mines = useList<Row<"mines">>("mines", "name", true);
   const [mineId, setMineId] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -61,7 +61,7 @@ function Page() {
       toast.success("Claim submitted — you'll be paid at month end");
       navigate({ to: "/worker" });
     },
-    onError: (e: any) => toast.error(e.message ?? "Failed to submit"),
+    onError: (e: Error) => toast.error(e.message ?? "Failed to submit"),
   });
 
   return (
@@ -140,7 +140,7 @@ function Page() {
               <SelectValue placeholder="Optional" />
             </SelectTrigger>
             <SelectContent>
-              {mines.data?.map((m: any) => (
+              {mines.data?.map((m) => (
                 <SelectItem key={m.id} value={m.id}>
                   {m.name}
                 </SelectItem>

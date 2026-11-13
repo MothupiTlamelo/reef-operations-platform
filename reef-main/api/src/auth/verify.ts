@@ -1,27 +1,15 @@
-
-
-
-import {
-  createLocalJWKSet,
-  jwtVerify,
-  type JWTPayload,
-} from "jose";
+import { createLocalJWKSet, jwtVerify, type JWTPayload } from "jose";
 
 export type VerifiedToken = {
   userId: string;
   sessionId: string;
 };
 
-export type TokenVerifier = (
-  token: string,
-) => Promise<VerifiedToken>;
+export type TokenVerifier = (token: string) => Promise<VerifiedToken>;
 
 type JwksResolver = ReturnType<typeof createLocalJWKSet>;
 
-export function supabaseVerifier(
-  supabaseUrl: string,
-  publishableKey: string,
-): TokenVerifier {
+export function supabaseVerifier(supabaseUrl: string, publishableKey: string): TokenVerifier {
   const normalizedUrl = supabaseUrl.replace(/\/+$/, "");
   const issuer = `${normalizedUrl}/auth/v1`;
   const jwksUrl = `${issuer}/.well-known/jwks.json`;
@@ -30,12 +18,8 @@ export function supabaseVerifier(
   let jwksFetchedAt = 0;
   let jwksRequest: Promise<JwksResolver> | undefined;
 
-  async function getJwks(
-    forceRefresh = false,
-  ): Promise<JwksResolver> {
-    const cacheIsFresh =
-      jwksResolver !== undefined &&
-      Date.now() - jwksFetchedAt < 10 * 60 * 1000;
+  async function getJwks(forceRefresh = false): Promise<JwksResolver> {
+    const cacheIsFresh = jwksResolver !== undefined && Date.now() - jwksFetchedAt < 10 * 60 * 1000;
 
     if (!forceRefresh && jwksResolver && cacheIsFresh) {
       return jwksResolver;
@@ -65,20 +49,14 @@ export function supabaseVerifier(
                 ? String(error.cause)
                 : "No additional cause";
 
-          throw new Error(
-            `Supabase JWKS fetch failed: ${error.message}. Details: ${cause}`,
-          );
+          throw new Error(`Supabase JWKS fetch failed: ${error.message}. Details: ${cause}`);
         }
 
-        throw new Error(
-          `Supabase JWKS fetch failed: ${String(error)}`,
-        );
+        throw new Error(`Supabase JWKS fetch failed: ${String(error)}`);
       }
 
       if (!response.ok) {
-        throw new Error(
-          `Could not retrieve Supabase signing keys: HTTP ${response.status}`,
-        );
+        throw new Error(`Could not retrieve Supabase signing keys: HTTP ${response.status}`);
       }
 
       const body: unknown = await response.json();
@@ -90,14 +68,10 @@ export function supabaseVerifier(
         !Array.isArray(body.keys) ||
         body.keys.length === 0
       ) {
-        throw new Error(
-          "Supabase returned an invalid or empty JWKS response",
-        );
+        throw new Error("Supabase returned an invalid or empty JWKS response");
       }
 
-      const resolver = createLocalJWKSet(
-        body as Parameters<typeof createLocalJWKSet>[0],
-      );
+      const resolver = createLocalJWKSet(body as Parameters<typeof createLocalJWKSet>[0]);
 
       jwksResolver = resolver;
       jwksFetchedAt = Date.now();
@@ -127,11 +101,7 @@ export function supabaseVerifier(
       }));
     } catch (error) {
       const errorCode =
-        error &&
-        typeof error === "object" &&
-        "code" in error
-          ? error.code
-          : undefined;
+        error && typeof error === "object" && "code" in error ? error.code : undefined;
 
       if (errorCode !== "ERR_JWKS_NO_MATCHING_KEY") {
         throw error;

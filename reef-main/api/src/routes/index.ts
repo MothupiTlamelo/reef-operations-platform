@@ -1,5 +1,3 @@
-
-
 import type { Hono } from "hono";
 import { z } from "zod";
 import {
@@ -127,10 +125,7 @@ export function registerRoutes(app: Hono<AppEnv>, registry: Registry) {
       const sessionId = parseWith(SessionId, c.req.param("sessionId"));
       const revoked = await c.var.repos.sessions.revoke(sessionId);
       if (!revoked) {
-        throw new ApiError(
-          "NOT_FOUND",
-          "That sign-in does not exist or has already been revoked",
-        );
+        throw new ApiError("NOT_FOUND", "That sign-in does not exist or has already been revoked");
       }
       return ok(c, { sessionId, revoked: true });
     },
@@ -303,8 +298,7 @@ export function registerRoutes(app: Hono<AppEnv>, registry: Registry) {
       access: "stock:read",
       summary:
         "Returns operational risks identified by REEF Sentinel, including equipment lifespan, overdue maintenance and critical or low stock.",
-      refuses:
-        "Unauthenticated users and users without stock read permission.",
+      refuses: "Unauthenticated users and users without stock read permission.",
     },
     async (c) => {
       const data = await c.var.repos.sentinel.assessData({

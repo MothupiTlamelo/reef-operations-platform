@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCaptureLimit } from "@/hooks/useCaptureLimit";
 import { ReasonField, useChangeReason } from "@/components/ReasonField";
 import { useOneAtATime } from "@/hooks/useOneAtATime";
-import { useList, useUpsert, useRemove, NUM, ZAR } from "@/lib/reef-db";
+import { useList, useUpsert, useRemove, NUM, ZAR, type Row } from "@/lib/reef-db";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { Field } from "@/components/ResourceDialog";
@@ -24,12 +24,12 @@ export const Route = createFileRoute("/_authenticated/production")({ component: 
 
 function Page() {
   const limit = useCaptureLimit();
-  const list = useList<any>("production_logs", "date");
-  const mines = useList<any>("mines", "name", true);
+  const list = useList<Row<"production_logs">>("production_logs", "date");
+  const mines = useList<Row<"mines">>("mines", "name", true);
   const upsert = useUpsert("production_logs");
   const reason = useChangeReason();
   const remove = useRemove("production_logs");
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<Row<"production_logs"> | null>(null);
   const [open, setOpen] = useState(false);
   const [mineId, setMineId] = useState("");
   const [shift, setShift] = useState("morning");
@@ -40,7 +40,7 @@ function Page() {
     setShift("morning");
     setOpen(true);
   };
-  const openEdit = (r: any) => {
+  const openEdit = (r: Row<"production_logs">) => {
     setEditing(r);
     setMineId(r.mine_id);
     setShift(r.shift ?? "morning");
@@ -209,15 +209,15 @@ function Page() {
             key: "mine",
             label: "Mine",
             sortable: true,
-            value: (r: any) => mines.data?.find((m) => m.id === r.mine_id)?.name,
-            render: (r: any) => mines.data?.find((m) => m.id === r.mine_id)?.name ?? "—",
+            value: (r) => mines.data?.find((m) => m.id === r.mine_id)?.name,
+            render: (r) => mines.data?.find((m) => m.id === r.mine_id)?.name ?? "—",
           },
           {
             key: "shift",
             label: "Shift",
             sortable: true,
-            value: (r: any) => [r.shift, r.team_name].filter(Boolean).join(" "),
-            render: (r: any) => (
+            value: (r) => [r.shift, r.team_name].filter(Boolean).join(" "),
+            render: (r) => (
               <span className="capitalize">
                 {r.shift ?? "—"}
                 {r.team_name ? ` · ${r.team_name}` : ""}
@@ -228,18 +228,18 @@ function Page() {
             key: "tons_produced",
             label: "Tons",
             sortable: true,
-            value: (r: any) => Number(r.tons_produced),
-            render: (r: any) => NUM(r.tons_produced),
+            value: (r) => Number(r.tons_produced),
+            render: (r) => NUM(r.tons_produced),
           },
           {
             key: "mag",
             label: "Magnetite",
-            render: (r: any) => `${NUM(r.magnetite_used)} t · ${ZAR(r.magnetite_cost)}`,
+            render: (r) => `${NUM(r.magnetite_used)} t · ${ZAR(r.magnetite_cost)}`,
           },
           {
             key: "ot",
             label: "Overtime",
-            render: (r: any) => `${NUM(r.overtime_hours)} h · ${ZAR(r.overtime_cost)}`,
+            render: (r) => `${NUM(r.overtime_hours)} h · ${ZAR(r.overtime_cost)}`,
           },
         ]}
         onEdit={openEdit}

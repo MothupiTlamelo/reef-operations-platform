@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ReasonField, useChangeReason } from "@/components/ReasonField";
-import { useList, useUpsert, useRemove, ZAR } from "@/lib/reef-db";
+import { useList, useUpsert, useRemove, ZAR, type Row } from "@/lib/reef-db";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { Field } from "@/components/ResourceDialog";
@@ -26,15 +26,15 @@ import {
 export const Route = createFileRoute("/_authenticated/mines")({ component: Page });
 
 function Page() {
-  const list = useList<any>("mines", "name", true);
-  const clients = useList<any>("clients", "name", true);
+  const list = useList<Row<"mines">>("mines", "name", true);
+  const clients = useList<Row<"clients">>("clients", "name", true);
   const upsert = useUpsert("mines", { showsConflicts: true });
   const reason = useChangeReason();
   const remove = useRemove("mines");
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<Row<"mines"> | null>(null);
   const [open, setOpen] = useState(false);
   const [clientId, setClientId] = useState<string>("");
-  const [conflict, setConflict] = useState<Conflict<any> | null>(null);
+  const [conflict, setConflict] = useState<Conflict<Row<"mines">> | null>(null);
   const [reloaded, setReloaded] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -45,7 +45,7 @@ function Page() {
     setReloaded(false);
     setOpen(true);
   };
-  const openEdit = (r: any) => {
+  const openEdit = (r: Row<"mines">) => {
     setEditing(r);
     setClientId(r.client_id ?? "");
     setConflict(null);
@@ -73,7 +73,7 @@ function Page() {
       });
     } catch (err) {
       // Someone else saved first: keep the dialog and everything typed in it, and show why.
-      const found = conflictFrom(err, typed, editing ?? {});
+      const found = conflictFrom<Row<"mines">>(err, typed, editing ?? {});
       if (found) {
         setConflict(found);
         setReloaded(false);
@@ -87,7 +87,7 @@ function Page() {
   // Their copy becomes the one this dialog edits, so the next save carries their version. Fields
   // the person changed keep their typing; fields they left alone take the other person's values,
   // so saving again cannot quietly undo a change this person never saw.
-  const loadTheirVersion = (current: any) => {
+  const loadTheirVersion = (current: Row<"mines">) => {
     if (!conflict) return;
     const keep = untouchedFields(conflict, [
       "name",
@@ -102,14 +102,15 @@ function Page() {
         continue;
       }
       const input = formRef.current?.elements.namedItem(key) as HTMLInputElement | null;
-      if (input) input.value = current[key] == null ? "" : String(current[key]);
+      const value = current[key as keyof Row<"mines">];
+      if (input) input.value = value == null ? "" : String(value);
     }
     setEditing(current);
     setConflict(null);
     setReloaded(true);
   };
 
-  const clientName = (id?: string) => clients.data?.find((c) => c.id === id)?.name ?? "—";
+  const clientName = (id?: string | null) => clients.data?.find((c) => c.id === id)?.name ?? "—";
 
   return (
     <div>
@@ -195,13 +196,13 @@ function Page() {
         rows={list.data ?? []}
         columns={[
           { key: "name", label: "Mine" },
-          { key: "client", label: "Client", render: (r: any) => clientName(r.client_id) },
+          { key: "client", label: "Client", render: (r) => clientName(r.client_id) },
           { key: "location", label: "Location" },
           { key: "team_name", label: "Team" },
           {
             key: "target",
             label: "Target R/t",
-            render: (r: any) => (r.target_cost_per_ton ? ZAR(r.target_cost_per_ton) : "—"),
+            render: (r) => (r.target_cost_per_ton ? ZAR(r.target_cost_per_ton) : "—"),
           },
         ]}
         onEdit={openEdit}

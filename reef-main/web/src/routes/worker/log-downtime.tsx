@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useList } from "@/lib/reef-db";
+import { useList, type Row } from "@/lib/reef-db";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -31,8 +31,8 @@ const REASONS = [
 ];
 
 function Page() {
-  const mines = useList<any>("mines", "name", true);
-  const equipment = useList<any>("equipment", "name", true);
+  const mines = useList<Row<"mines">>("mines", "name", true);
+  const equipment = useList<Row<"equipment">>("equipment", "name", true);
   const [mineId, setMineId] = useState("");
   const [equipId, setEquipId] = useState("");
   const [reason, setReason] = useState("breakdown");
@@ -64,7 +64,7 @@ function Page() {
       toast.success("Downtime logged");
       navigate({ to: "/worker" });
     },
-    onError: (e: any) => toast.error(e.message ?? "Failed"),
+    onError: (e: Error) => toast.error(e.message ?? "Failed"),
   });
 
   return (
@@ -77,7 +77,7 @@ function Page() {
             <SelectValue placeholder="Select mine" />
           </SelectTrigger>
           <SelectContent>
-            {mines.data?.map((m: any) => (
+            {mines.data?.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.name}
               </SelectItem>
@@ -107,7 +107,7 @@ function Page() {
             <SelectValue placeholder="Optional" />
           </SelectTrigger>
           <SelectContent>
-            {equipment.data?.map((e: any) => (
+            {equipment.data?.map((e) => (
               <SelectItem key={e.id} value={e.id}>
                 {e.name}
               </SelectItem>

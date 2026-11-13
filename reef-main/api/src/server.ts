@@ -7,10 +7,7 @@ import { startScheduler } from "./services/scheduler.js";
 
 const config = loadConfig();
 const { app } = createApp({
-  verifyToken: supabaseVerifier(
-  config.supabaseUrl,
-  config.supabaseKey,
-),
+  verifyToken: supabaseVerifier(config.supabaseUrl, config.supabaseKey),
   repositories: supabaseRepositories(config),
   corsOrigins: config.corsOrigins,
   retention: config.retention,

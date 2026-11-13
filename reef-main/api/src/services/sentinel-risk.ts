@@ -1,14 +1,10 @@
-
 import type { Machine } from "./service-due.js";
 import { serviceDue } from "./service-due.js";
 
 export type SentinelSeverity = "low" | "medium" | "high";
 
 export type SentinelRiskCategory =
-  | "equipment_lifespan"
-  | "maintenance_overdue"
-  | "stock_critical"
-  | "stock_low";
+  "equipment_lifespan" | "maintenance_overdue" | "stock_critical" | "stock_low";
 
 export type SentinelRisk = {
   id: string;
@@ -78,21 +74,17 @@ function equipmentLifespanRisks(
   for (const machine of equipment) {
     if (machine.status !== "active") continue;
 
-    const tonsUsed = percentageUsed(
-      machine.tons_since_install,
-      machine.expected_life_tons ?? 0,
-    );
+    const tonsUsed = percentageUsed(machine.tons_since_install, machine.expected_life_tons ?? 0);
 
-    const hoursUsed = percentageUsed(
-      machine.hours_since_install,
-      machine.expected_life_hours ?? 0,
-    );
+    const hoursUsed = percentageUsed(machine.hours_since_install, machine.expected_life_hours ?? 0);
 
     const measurements = [
       { label: "tonnage", percentage: tonsUsed },
       { label: "operating hours", percentage: hoursUsed },
     ].filter(
-      (measurement): measurement is {
+      (
+        measurement,
+      ): measurement is {
         label: string;
         percentage: number;
       } => measurement.percentage !== null,
@@ -178,10 +170,7 @@ function maintenanceRisks(
   return risks;
 }
 
-function stockRisks(
-  levels: readonly SentinelStockLevel[],
-  detectedAt: string,
-): SentinelRisk[] {
+function stockRisks(levels: readonly SentinelStockLevel[], detectedAt: string): SentinelRisk[] {
   const risks: SentinelRisk[] = [];
 
   for (const level of levels) {
@@ -235,7 +224,6 @@ function stockRisks(
   return risks;
 }
 
-
 export function assessSentinelRisks(input: SentinelInput): SentinelRisk[] {
   const detectedAt = input.detectedAt ?? new Date().toISOString();
 
@@ -243,9 +231,5 @@ export function assessSentinelRisks(input: SentinelInput): SentinelRisk[] {
     ...equipmentLifespanRisks(input.equipment, detectedAt),
     ...maintenanceRisks(input.equipment, input.today, detectedAt),
     ...stockRisks(input.stockLevels, detectedAt),
-  ].sort(
-    (a, b) =>
-      b.score - a.score ||
-      a.title.localeCompare(b.title),
-  );
+  ].sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 }
