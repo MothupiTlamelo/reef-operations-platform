@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { fetchMe } from "@/lib/api";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
+import { NotificationBell } from "@/components/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -45,6 +46,7 @@ function AuthedLayout() {
               <Link to="/dashboard">Reef Ops</Link>
             </div>
             <div className="text-sm hidden md:block">{user.email}</div>
+            <NotificationBell />
             <Button variant="ghost" size="sm" onClick={signOut}>
               <LogOut className="w-4 h-4 mr-1" />
               Sign out
