@@ -53,7 +53,7 @@ describe("T18: cost per ton when nothing was produced", () => {
   it("shows 'No production' for a site that produced nothing, not R 0", async () => {
     production = [{ id: "p1", mine_id: KRIEL.id, date: thisMonth, tons_produced: 400, magnetite_cost: 8000, overtime_cost: 0 }];
     await renderScreen(await pageOf("analytics"));
-    const table = (await screen.findByText("Cost per ton by mine")).closest("div[class*='card'], .rounded-lg, section") ?? document.body;
+    const table = (await screen.findByText("Direct cost per ton by mine")).closest("div[class*='card'], .rounded-lg, section") ?? document.body;
 
     // The last cell of each row is the R / ton column.
     const rate = (row: Element) => [...row.querySelectorAll("td")].at(-1)?.textContent;

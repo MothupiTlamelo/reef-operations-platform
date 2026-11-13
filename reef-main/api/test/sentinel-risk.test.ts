@@ -1,4 +1,3 @@
-
 import { describe, expect, it } from "vitest";
 import {
   assessSentinelRisks,
@@ -10,9 +9,7 @@ import {
 const detectedAt = "2026-11-11T08:00:00.000Z";
 const today = "2026-11-11";
 
-function equipment(
-  overrides: Partial<SentinelEquipment> = {},
-): SentinelEquipment {
+function equipment(overrides: Partial<SentinelEquipment> = {}): SentinelEquipment {
   return {
     id: "equipment-001",
     name: "Primary Crusher",
@@ -32,9 +29,7 @@ function equipment(
   };
 }
 
-function stockLevel(
-  overrides: Partial<SentinelStockLevel> = {},
-): SentinelStockLevel {
+function stockLevel(overrides: Partial<SentinelStockLevel> = {}): SentinelStockLevel {
   return {
     id: "stock-level-001",
     stock_item_id: "stock-item-001",
@@ -74,9 +69,7 @@ describe("REEF Sentinel risk engine", () => {
         }),
       );
 
-      const risk = risks.find(
-        (item) => item.category === "equipment_lifespan",
-      );
+      const risk = risks.find((item) => item.category === "equipment_lifespan");
 
       expect(risk).toBeDefined();
       expect(risk?.score).toBe(80);
@@ -97,9 +90,7 @@ describe("REEF Sentinel risk engine", () => {
         }),
       );
 
-      expect(
-        risks.some((item) => item.category === "equipment_lifespan"),
-      ).toBe(false);
+      expect(risks.some((item) => item.category === "equipment_lifespan")).toBe(false);
     });
 
     it("uses the highest valid lifespan measurement", () => {
@@ -116,14 +107,10 @@ describe("REEF Sentinel risk engine", () => {
         }),
       );
 
-      const risk = risks.find(
-        (item) => item.category === "equipment_lifespan",
-      );
+      const risk = risks.find((item) => item.category === "equipment_lifespan");
 
       expect(risk?.score).toBe(90);
-      expect(risk?.explanation).toContain(
-        "operating hours: 90.0% of expected lifespan",
-      );
+      expect(risk?.explanation).toContain("operating hours: 90.0% of expected lifespan");
     });
 
     it("does not flag inactive equipment", () => {
@@ -139,9 +126,7 @@ describe("REEF Sentinel risk engine", () => {
         }),
       );
 
-      expect(
-        risks.some((item) => item.category === "equipment_lifespan"),
-      ).toBe(false);
+      expect(risks.some((item) => item.category === "equipment_lifespan")).toBe(false);
     });
 
     it("does not calculate a lifespan risk when no valid limit exists", () => {
@@ -156,9 +141,7 @@ describe("REEF Sentinel risk engine", () => {
         }),
       );
 
-      expect(
-        risks.some((item) => item.category === "equipment_lifespan"),
-      ).toBe(false);
+      expect(risks.some((item) => item.category === "equipment_lifespan")).toBe(false);
     });
   });
 
@@ -175,16 +158,12 @@ describe("REEF Sentinel risk engine", () => {
         }),
       );
 
-      const risk = risks.find(
-        (item) => item.category === "maintenance_overdue",
-      );
+      const risk = risks.find((item) => item.category === "maintenance_overdue");
 
       expect(risk).toBeDefined();
       expect(risk?.severity).toBe("high");
       expect(risk?.score).toBe(85);
-      expect(risk?.explanation).toContain(
-        "Recorded service due date: 2026-11-10",
-      );
+      expect(risk?.explanation).toContain("Recorded service due date: 2026-11-10");
     });
 
     it("does not flag equipment before its service due date", () => {
@@ -199,9 +178,7 @@ describe("REEF Sentinel risk engine", () => {
         }),
       );
 
-      expect(
-        risks.some((item) => item.category === "maintenance_overdue"),
-      ).toBe(false);
+      expect(risks.some((item) => item.category === "maintenance_overdue")).toBe(false);
     });
 
     it("does not flag inactive equipment for overdue maintenance", () => {
@@ -216,9 +193,7 @@ describe("REEF Sentinel risk engine", () => {
         }),
       );
 
-      expect(
-        risks.some((item) => item.category === "maintenance_overdue"),
-      ).toBe(false);
+      expect(risks.some((item) => item.category === "maintenance_overdue")).toBe(false);
     });
   });
 
@@ -230,9 +205,7 @@ describe("REEF Sentinel risk engine", () => {
         }),
       );
 
-      const risk = risks.find(
-        (item) => item.category === "stock_critical",
-      );
+      const risk = risks.find((item) => item.category === "stock_critical");
 
       expect(risk).toBeDefined();
       expect(risk?.score).toBe(100);
@@ -251,9 +224,7 @@ describe("REEF Sentinel risk engine", () => {
         }),
       );
 
-      const risk = risks.find(
-        (item) => item.category === "stock_low",
-      );
+      const risk = risks.find((item) => item.category === "stock_low");
 
       expect(risk).toBeDefined();
       expect(risk?.score).toBe(60);
