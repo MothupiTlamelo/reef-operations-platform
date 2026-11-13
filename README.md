@@ -2,7 +2,9 @@
 
 An integrated operations management platform designed to support mining operations, business administration, operational monitoring and intelligent decision-making.
 
----
+---  
+
+# https://youtu.be/U0xm50aKDo0 #
 
 ## Table of Contents
 
