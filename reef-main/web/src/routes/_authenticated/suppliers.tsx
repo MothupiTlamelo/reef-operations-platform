@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ReasonField, useChangeReason } from "@/components/ReasonField";
-import { useList, useUpsert, useRemove } from "@/lib/reef-db";
+import { useList, useUpsert, useRemove, type Row } from "@/lib/reef-db";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { Field } from "@/components/ResourceDialog";
@@ -14,11 +14,11 @@ import { Plus } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/suppliers")({ component: Page });
 
 function Page() {
-  const list = useList<any>("suppliers", "name", true);
+  const list = useList<Row<"suppliers">>("suppliers", "name", true);
   const upsert = useUpsert("suppliers");
   const reason = useChangeReason();
   const remove = useRemove("suppliers");
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<Row<"suppliers"> | null>(null);
   const [open, setOpen] = useState(false);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {

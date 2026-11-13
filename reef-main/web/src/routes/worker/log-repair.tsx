@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { reefToday } from "@reef/shared";
-import { useList } from "@/lib/reef-db";
+import { useList, type Row } from "@/lib/reef-db";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,7 +23,7 @@ import { Camera } from "lucide-react";
 export const Route = createFileRoute("/worker/log-repair")({ component: Page });
 
 function Page() {
-  const equipment = useList<any>("equipment", "name", true);
+  const equipment = useList<Row<"equipment">>("equipment", "name", true);
   const [equipId, setEquipId] = useState("");
   const [desc, setDesc] = useState("");
   const [cost, setCost] = useState<number>(0);
@@ -54,7 +54,7 @@ function Page() {
       toast.success("Repair logged");
       navigate({ to: "/worker" });
     },
-    onError: (e: any) => toast.error(e.message ?? "Failed"),
+    onError: (e: Error) => toast.error(e.message ?? "Failed"),
   });
 
   return (
@@ -67,7 +67,7 @@ function Page() {
             <SelectValue placeholder="Select equipment" />
           </SelectTrigger>
           <SelectContent>
-            {equipment.data?.map((e: any) => (
+            {equipment.data?.map((e) => (
               <SelectItem key={e.id} value={e.id}>
                 {e.name}
               </SelectItem>

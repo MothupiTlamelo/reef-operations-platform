@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useList, ZAR } from "@/lib/reef-db";
+import { useList, ZAR, type Row } from "@/lib/reef-db";
 import { signedPhotoUrl } from "@/lib/photo-upload";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ function Page() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null);
 
-  const employees = useList<any>("employees", "full_name", true);
+  const employees = useList<Row<"employees">>("employees", "full_name", true);
   const employeeById = useMemo(() => {
     const m = new Map<string, string>();
     for (const e of employees.data ?? []) m.set(e.id, e.full_name);
@@ -118,7 +118,7 @@ function Page() {
       setSelected(new Set());
       setConfirmOpen(false);
     },
-    onError: (e: any) => toast.error(e.message ?? "Failed"),
+    onError: (e: Error) => toast.error(e.message ?? "Failed"),
   });
 
   const markOnePaid = useMutation({
@@ -133,7 +133,7 @@ function Page() {
       toast.success("Marked paid");
       setViewPurchase(null);
     },
-    onError: (e: any) => toast.error(e.message ?? "Failed"),
+    onError: (e: Error) => toast.error(e.message ?? "Failed"),
   });
 
   const statusVariant = (s: string) =>
@@ -253,7 +253,7 @@ function Page() {
                   <td className="p-3 text-muted-foreground">{r.category}</td>
                   <td className="p-3 text-right num-mono">{ZAR(r.amount)}</td>
                   <td className="p-3">
-                    <Badge variant={statusVariant(r.status) as any}>{r.status}</Badge>
+                    <Badge variant={statusVariant(r.status)}>{r.status}</Badge>
                   </td>
                   <td className="p-3">
                     <Button size="sm" variant="ghost" onClick={() => setViewPurchase(r)}>
@@ -362,9 +362,7 @@ function Page() {
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">Status</div>
-                  <Badge variant={statusVariant(viewPurchase.status) as any}>
-                    {viewPurchase.status}
-                  </Badge>
+                  <Badge variant={statusVariant(viewPurchase.status)}>{viewPurchase.status}</Badge>
                 </div>
                 {viewPurchase.paid_on && (
                   <div>

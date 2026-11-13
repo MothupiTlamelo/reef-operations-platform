@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
+  ShieldCheck,
   Users,
   Mountain,
   Wrench,
@@ -38,6 +39,11 @@ const items = [
     title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Sentinel",
+    url: "/sentinel",
+    icon: ShieldCheck,
   },
   {
     title: "Cost Analytics",

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, type FormEvent } from "react";
-import { useList, useUpsert, useRemove, NUM, ZAR } from "@/lib/reef-db";
+import { useList, useUpsert, useRemove, NUM, ZAR, type Row } from "@/lib/reef-db";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
@@ -47,10 +47,10 @@ const STATUSES = ["present", "absent", "late", "leave", "sick"] as const;
 
 function Page() {
   const { employeeId } = Route.useParams();
-  const employees = useList<any>("employees", "full_name", true);
-  const mines = useList<any>("mines", "name", true);
-  const attendance = useList<any>("attendance", "date");
-  const transfers = useList<any>("employee_transfers", "transfer_date");
+  const employees = useList<Row<"employees">>("employees", "full_name", true);
+  const mines = useList<Row<"mines">>("mines", "name", true);
+  const attendance = useList<Row<"attendance">>("attendance", "date");
+  const transfers = useList<Row<"employee_transfers">>("employee_transfers", "transfer_date");
   const upsertAtt = useUpsert("attendance");
   const removeAtt = useRemove("attendance");
   const upsertTransfer = useUpsert("employee_transfers");
@@ -58,32 +58,32 @@ function Page() {
   const attReason = useChangeReason();
   const transferReason = useChangeReason();
 
-  const emp = employees.data?.find((e: any) => e.id === employeeId);
+  const emp = employees.data?.find((e) => e.id === employeeId);
   const mineName = (id: string | null) =>
-    mines.data?.find((m: any) => m.id === id)?.name ?? "Unassigned";
+    mines.data?.find((m) => m.id === id)?.name ?? "Unassigned";
 
   const myAtt = useMemo(
-    () => (attendance.data ?? []).filter((a: any) => a.employee_id === employeeId),
+    () => (attendance.data ?? []).filter((a) => a.employee_id === employeeId),
     [attendance.data, employeeId],
   );
   const myTransfers = useMemo(
-    () => (transfers.data ?? []).filter((t: any) => t.employee_id === employeeId),
+    () => (transfers.data ?? []).filter((t) => t.employee_id === employeeId),
     [transfers.data, employeeId],
   );
 
   const totals = useMemo(
     () => ({
-      days: myAtt.filter((a: any) => a.status === "present" || a.status === "late").length,
-      absent: myAtt.filter((a: any) => a.status !== "present" && a.status !== "late").length,
-      hours: myAtt.reduce((n: number, a: any) => n + Number(a.hours_worked ?? 0), 0),
-      overtime: myAtt.reduce((n: number, a: any) => n + Number(a.overtime_hours ?? 0), 0),
-      tons: myAtt.reduce((n: number, a: any) => n + Number(a.tons_contributed ?? 0), 0),
+      days: myAtt.filter((a) => a.status === "present" || a.status === "late").length,
+      absent: myAtt.filter((a) => a.status !== "present" && a.status !== "late").length,
+      hours: myAtt.reduce((n: number, a) => n + Number(a.hours_worked ?? 0), 0),
+      overtime: myAtt.reduce((n: number, a) => n + Number(a.overtime_hours ?? 0), 0),
+      tons: myAtt.reduce((n: number, a) => n + Number(a.tons_contributed ?? 0), 0),
     }),
     [myAtt],
   );
 
   const [attOpen, setAttOpen] = useState(false);
-  const [editingAtt, setEditingAtt] = useState<any>(null);
+  const [editingAtt, setEditingAtt] = useState<Row<"attendance"> | null>(null);
   const [attShift, setAttShift] = useState<string>("morning");
   const [attStatus, setAttStatus] = useState<string>("present");
   const [transferOpen, setTransferOpen] = useState(false);
@@ -116,7 +116,7 @@ function Page() {
     setAttStatus("present");
     setAttOpen(true);
   };
-  const openEditAtt = (r: any) => {
+  const openEditAtt = (r: Row<"attendance">) => {
     setEditingAtt(r);
     setAttShift(r.shift);
     setAttStatus(r.status);
@@ -360,8 +360,8 @@ function Page() {
                 </SelectTrigger>
                 <SelectContent>
                   {mines.data
-                    ?.filter((m: any) => m.id !== emp.mine_id)
-                    .map((m: any) => (
+                    ?.filter((m) => m.id !== emp.mine_id)
+                    .map((m) => (
                       <SelectItem key={m.id} value={m.id}>
                         {m.name}
                       </SelectItem>
@@ -394,7 +394,7 @@ function Page() {
           {
             key: "shift",
             label: "Shift",
-            render: (r: any) => (
+            render: (r) => (
               <Badge variant="secondary" className="capitalize">
                 {r.shift}
               </Badge>
@@ -403,16 +403,16 @@ function Page() {
           {
             key: "status",
             label: "Status",
-            render: (r: any) => <span className="capitalize">{r.status}</span>,
+            render: (r) => <span className="capitalize">{r.status}</span>,
           },
           {
             key: "hours",
             label: "Hours",
-            render: (r: any) =>
+            render: (r) =>
               `${NUM(r.hours_worked)} h${Number(r.overtime_hours) ? ` (+${NUM(r.overtime_hours)} OT)` : ""}`,
           },
-          { key: "tons_contributed", label: "Tonnes", render: (r: any) => NUM(r.tons_contributed) },
-          { key: "notes", label: "Notes", render: (r: any) => r.notes ?? "—" },
+          { key: "tons_contributed", label: "Tonnes", render: (r) => NUM(r.tons_contributed) },
+          { key: "notes", label: "Notes", render: (r) => r.notes ?? "—" },
         ]}
         onEdit={openEditAtt}
         onDelete={(r) => removeAtt.mutate(r.id)}
@@ -424,9 +424,9 @@ function Page() {
         empty="No transfers recorded."
         columns={[
           { key: "transfer_date", label: "Date" },
-          { key: "from", label: "From", render: (r: any) => mineName(r.from_mine_id) },
-          { key: "to", label: "To", render: (r: any) => mineName(r.to_mine_id) },
-          { key: "reason", label: "Reason", render: (r: any) => r.reason ?? "—" },
+          { key: "from", label: "From", render: (r) => mineName(r.from_mine_id) },
+          { key: "to", label: "To", render: (r) => mineName(r.to_mine_id) },
+          { key: "reason", label: "Reason", render: (r) => r.reason ?? "—" },
         ]}
       />
     </div>

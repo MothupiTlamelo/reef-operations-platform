@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCaptureLimit } from "@/hooks/useCaptureLimit";
 import { useOneAtATime } from "@/hooks/useOneAtATime";
-import { useList, useRemove, ZAR, NUM } from "@/lib/reef-db";
+import { useList, useRemove, ZAR, NUM, type Row } from "@/lib/reef-db";
 import { STOCK_KEY, useStockOnHand } from "@/hooks/useStock";
 import { api } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
@@ -30,8 +30,8 @@ type PartRow = { stock_item_id: string; qty: number };
 
 function Page() {
   const limit = useCaptureLimit();
-  const list = useList<any>("maintenance_logs", "date");
-  const equipment = useList<any>("equipment", "name", true);
+  const list = useList<Row<"maintenance_logs">>("maintenance_logs", "date");
+  const equipment = useList<Row<"equipment">>("equipment", "name", true);
   const stock = useStockOnHand();
   const qc = useQueryClient();
   const remove = useRemove("maintenance_logs");
@@ -48,7 +48,7 @@ function Page() {
 
   const saveLog = useMutation({
     // The repair and its parts go in one request and are saved together, or not at all.
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: Record<string, unknown>) => {
       const cleanParts = parts.filter((p) => p.stock_item_id && p.qty > 0);
       const res = await api("/api/v1/maintenance-logs", {
         method: "POST",
@@ -63,7 +63,7 @@ function Page() {
       toast.success("Repair logged. Stock updated and POs drafted where needed.");
       setOpen(false);
     },
-    onError: (e: any) => toast.error(e.message ?? "Save failed"),
+    onError: (e: Error) => toast.error(e.message ?? "Save failed"),
   });
 
   const once = useOneAtATime();
@@ -234,14 +234,14 @@ function Page() {
           {
             key: "equipment",
             label: "Equipment",
-            render: (r: any) => equipment.data?.find((e) => e.id === r.equipment_id)?.name ?? "—",
+            render: (r) => equipment.data?.find((e) => e.id === r.equipment_id)?.name ?? "—",
           },
           { key: "description", label: "Description" },
-          { key: "total_cost", label: "Total cost", render: (r: any) => ZAR(r.total_cost) },
+          { key: "total_cost", label: "Total cost", render: (r) => ZAR(r.total_cost) },
           {
             key: "next",
             label: "Next due",
-            render: (r: any) => {
+            render: (r) => {
               if (!r.next_due_date) return "—";
               const overdue = new Date(r.next_due_date) < new Date();
               return (

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ReasonField, useChangeReason } from "@/components/ReasonField";
-import { useList, useUpsert, useRemove, ZAR } from "@/lib/reef-db";
+import { useList, useUpsert, useRemove, ZAR, type Row } from "@/lib/reef-db";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { Field } from "@/components/ResourceDialog";
@@ -21,12 +21,12 @@ import { Plus } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/static-costs")({ component: Page });
 
 function Page() {
-  const list = useList<any>("static_costs", "month");
-  const mines = useList<any>("mines", "name", true);
+  const list = useList<Row<"static_costs">>("static_costs", "month");
+  const mines = useList<Row<"mines">>("mines", "name", true);
   const upsert = useUpsert("static_costs");
   const reason = useChangeReason();
   const remove = useRemove("static_costs");
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<Row<"static_costs"> | null>(null);
   const [open, setOpen] = useState(false);
   const [mineId, setMineId] = useState("");
 
@@ -35,7 +35,7 @@ function Page() {
     setMineId("");
     setOpen(true);
   };
-  const openEdit = (r: any) => {
+  const openEdit = (r: Row<"static_costs">) => {
     setEditing(r);
     setMineId(r.mine_id ?? "");
     setOpen(true);
@@ -132,17 +132,17 @@ function Page() {
           {
             key: "month",
             label: "Month",
-            render: (r: any) =>
+            render: (r) =>
               new Date(r.month).toLocaleString("default", { month: "long", year: "numeric" }),
           },
           { key: "category", label: "Category" },
           {
             key: "mine",
             label: "Mine",
-            render: (r: any) =>
+            render: (r) =>
               r.mine_id ? mines.data?.find((m) => m.id === r.mine_id)?.name : "Company-wide",
           },
-          { key: "amount", label: "Amount", render: (r: any) => ZAR(r.amount) },
+          { key: "amount", label: "Amount", render: (r) => ZAR(r.amount) },
         ]}
         onEdit={openEdit}
         onDelete={(r) => remove.mutate(r.id)}

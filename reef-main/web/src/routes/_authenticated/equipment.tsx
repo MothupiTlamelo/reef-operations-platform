@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ReasonField, useChangeReason } from "@/components/ReasonField";
-import { useList, useUpsert, useRemove, NUM, ZAR } from "@/lib/reef-db";
+import { useList, useUpsert, useRemove, NUM, ZAR, type Row } from "@/lib/reef-db";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { Field } from "@/components/ResourceDialog";
@@ -21,12 +21,12 @@ import { Plus } from "lucide-react";
 export const Route = createFileRoute("/_authenticated/equipment")({ component: Page });
 
 function Page() {
-  const list = useList<any>("equipment", "name", true);
-  const mines = useList<any>("mines", "name", true);
+  const list = useList<Row<"equipment">>("equipment", "name", true);
+  const mines = useList<Row<"mines">>("mines", "name", true);
   const upsert = useUpsert("equipment");
   const reason = useChangeReason();
   const remove = useRemove("equipment");
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<Row<"equipment"> | null>(null);
   const [open, setOpen] = useState(false);
   const [mineId, setMineId] = useState("");
 
@@ -35,7 +35,7 @@ function Page() {
     setMineId("");
     setOpen(true);
   };
-  const openEdit = (r: any) => {
+  const openEdit = (r: Row<"equipment">) => {
     setEditing(r);
     setMineId(r.mine_id ?? "");
     setOpen(true);
@@ -63,7 +63,7 @@ function Page() {
     setOpen(false);
   };
 
-  const pctLife = (r: any) =>
+  const pctLife = (r: Row<"equipment">) =>
     r.expected_life_tons
       ? Math.max(0, 100 - (Number(r.tons_since_install) / Number(r.expected_life_tons)) * 100)
       : null;
@@ -182,17 +182,17 @@ function Page() {
           {
             key: "mine_id",
             label: "Mine",
-            render: (r: any) => mines.data?.find((m) => m.id === r.mine_id)?.name ?? "—",
+            render: (r) => mines.data?.find((m) => m.id === r.mine_id)?.name ?? "—",
           },
           {
             key: "tons",
             label: "Tons since install",
-            render: (r: any) => NUM(r.tons_since_install),
+            render: (r) => NUM(r.tons_since_install),
           },
           {
             key: "life",
             label: "Life left",
-            render: (r: any) => {
+            render: (r) => {
               const p = pctLife(r);
               if (p === null) return "—";
               return (
@@ -205,7 +205,7 @@ function Page() {
           {
             key: "rep",
             label: "Replacement",
-            render: (r: any) => (r.replacement_cost ? ZAR(r.replacement_cost) : "—"),
+            render: (r) => (r.replacement_cost ? ZAR(r.replacement_cost) : "—"),
           },
         ]}
         onEdit={openEdit}

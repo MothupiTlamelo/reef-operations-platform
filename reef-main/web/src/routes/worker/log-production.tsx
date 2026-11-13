@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { reefToday } from "@reef/shared";
-import { useList } from "@/lib/reef-db";
+import { useList, type Row } from "@/lib/reef-db";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -21,7 +21,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/worker/log-production")({ component: Page });
 
 function Page() {
-  const mines = useList<any>("mines", "name", true);
+  const mines = useList<Row<"mines">>("mines", "name", true);
   const [mineId, setMineId] = useState("");
   const [tons, setTons] = useState<number>(0);
   const navigate = useNavigate();
@@ -42,7 +42,7 @@ function Page() {
       toast.success("Production logged");
       navigate({ to: "/worker" });
     },
-    onError: (e: any) => toast.error(e.message ?? "Failed"),
+    onError: (e: Error) => toast.error(e.message ?? "Failed"),
   });
 
   return (
@@ -55,7 +55,7 @@ function Page() {
             <SelectValue placeholder="Select mine" />
           </SelectTrigger>
           <SelectContent>
-            {mines.data?.map((m: any) => (
+            {mines.data?.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.name}
               </SelectItem>

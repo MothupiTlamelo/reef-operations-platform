@@ -177,7 +177,10 @@ export function DataTable<T extends { id: string }>({
                 <TableRow key={row.id}>
                   {columns.map((c) => (
                     <TableCell key={c.key}>
-                      {c.render ? c.render(row) : ((row as any)[c.key] ?? "—")}
+                      {c.render
+                        ? c.render(row)
+                        : (((row as unknown as Record<string, unknown>)[c.key] ??
+                            "—") as ReactNode)}
                     </TableCell>
                   ))}
                   <TableCell className="text-right">

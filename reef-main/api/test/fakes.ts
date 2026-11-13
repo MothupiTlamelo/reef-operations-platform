@@ -1249,6 +1249,12 @@ export function testApp(overrides: Partial<Repositories> = {}) {
         workerPurchaseRows,
         jobs,
         reorderRequests,
+        sentinel: {
+          assessData: async () => ({
+            equipment: [],
+            stockLevels: [],
+          }),
+        },
         ...overrides,
       };
     },
