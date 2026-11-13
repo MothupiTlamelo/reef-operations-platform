@@ -3,7 +3,7 @@ import { useCaptureLimit } from "@/hooks/useCaptureLimit";
 import { ReasonField, useChangeReason } from "@/components/ReasonField";
 import { useOneAtATime } from "@/hooks/useOneAtATime";
 import { useMemo, useState, type FormEvent } from "react";
-import { useList, useUpsert, useRemove, NUM, ZAR } from "@/lib/reef-db";
+import { useList, useUpsert, useRemove, NUM, ZAR, type Row } from "@/lib/reef-db";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { Field } from "@/components/ResourceDialog";
@@ -47,16 +47,16 @@ const FUEL_TYPES = ["diesel", "petrol", "oil", "other"] as const;
 
 function Page() {
   const limit = useCaptureLimit();
-  const slips = useList<any>("fuel_slips", "date");
-  const mines = useList<any>("mines", "name", true);
-  const equipment = useList<any>("equipment", "name", true);
-  const employees = useList<any>("employees", "full_name", true);
+  const slips = useList<Row<"fuel_slips">>("fuel_slips", "date");
+  const mines = useList<Row<"mines">>("mines", "name", true);
+  const equipment = useList<Row<"equipment">>("equipment", "name", true);
+  const employees = useList<Row<"employees">>("employees", "full_name", true);
   const upsert = useUpsert("fuel_slips");
   const reason = useChangeReason();
   const remove = useRemove("fuel_slips");
 
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<Row<"fuel_slips"> | null>(null);
   const [mineId, setMineId] = useState("none");
   const [equipId, setEquipId] = useState("none");
   const [empId, setEmpId] = useState("none");
@@ -75,7 +75,7 @@ function Page() {
     setCpl(0);
     setOpen(true);
   };
-  const openEdit = (r: any) => {
+  const openEdit = (r: Row<"fuel_slips">) => {
     setEditing(r);
     setMineId(r.mine_id ?? "none");
     setEquipId(r.equipment_id ?? "none");
@@ -114,22 +114,19 @@ function Page() {
     }).catch(() => {});
   };
 
-  const equipName = (id: string | null) =>
-    equipment.data?.find((e: any) => e.id === id)?.name ?? null;
-  const assetLabel = (r: any) => equipName(r.equipment_id) ?? r.vehicle_label ?? "Unassigned";
+  const equipName = (id: string | null) => equipment.data?.find((e) => e.id === id)?.name ?? null;
+  const assetLabel = (r: Row<"fuel_slips">) =>
+    equipName(r.equipment_id) ?? r.vehicle_label ?? "Unassigned";
 
   const rows = useMemo(
-    () =>
-      (slips.data ?? []).filter(
-        (s: any) => filterEquip === "all" || s.equipment_id === filterEquip,
-      ),
+    () => (slips.data ?? []).filter((s) => filterEquip === "all" || s.equipment_id === filterEquip),
     [slips.data, filterEquip],
   );
 
   const month = new Date().toISOString().slice(0, 7);
-  const mtd = (slips.data ?? []).filter((s: any) => String(s.date).slice(0, 7) === month);
-  const mtdLitres = mtd.reduce((n: number, s: any) => n + Number(s.litres ?? 0), 0);
-  const mtdSpend = mtd.reduce((n: number, s: any) => n + Number(s.total_cost ?? 0), 0);
+  const mtd = (slips.data ?? []).filter((s) => String(s.date).slice(0, 7) === month);
+  const mtdLitres = mtd.reduce((n: number, s) => n + Number(s.litres ?? 0), 0);
+  const mtdSpend = mtd.reduce((n: number, s) => n + Number(s.total_cost ?? 0), 0);
 
   const perAsset = useMemo(() => {
     const map = new Map<string, { label: string; litres: number; cost: number; slips: number }>();
@@ -223,7 +220,7 @@ function Page() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All vehicles / tools</SelectItem>
-            {equipment.data?.map((e: any) => (
+            {equipment.data?.map((e) => (
               <SelectItem key={e.id} value={e.id}>
                 {e.name}
               </SelectItem>
@@ -265,7 +262,7 @@ function Page() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Unassigned</SelectItem>
-                    {mines.data?.map((m: any) => (
+                    {mines.data?.map((m) => (
                       <SelectItem key={m.id} value={m.id}>
                         {m.name}
                       </SelectItem>
@@ -280,7 +277,7 @@ function Page() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Not listed</SelectItem>
-                    {equipment.data?.map((e: any) => (
+                    {equipment.data?.map((e) => (
                       <SelectItem key={e.id} value={e.id}>
                         {e.name}
                       </SelectItem>
@@ -346,7 +343,7 @@ function Page() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Unspecified</SelectItem>
-                  {employees.data?.map((e: any) => (
+                  {employees.data?.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
                       {e.full_name}
                     </SelectItem>
@@ -373,7 +370,7 @@ function Page() {
           {
             key: "asset",
             label: "Vehicle / tool",
-            render: (r: any) => (
+            render: (r) => (
               <div>
                 <div className="font-medium">{assetLabel(r)}</div>
                 <div className="text-xs text-muted-foreground capitalize">
@@ -386,18 +383,18 @@ function Page() {
           {
             key: "mine",
             label: "Mine",
-            render: (r: any) => mines.data?.find((m: any) => m.id === r.mine_id)?.name ?? "—",
+            render: (r) => mines.data?.find((m) => m.id === r.mine_id)?.name ?? "—",
           },
-          { key: "litres", label: "Litres", render: (r: any) => `${NUM(r.litres)} L` },
+          { key: "litres", label: "Litres", render: (r) => `${NUM(r.litres)} L` },
           {
             key: "cost",
             label: "Cost",
-            render: (r: any) => `${ZAR(r.total_cost)} @ ${ZAR(r.cost_per_litre)}/L`,
+            render: (r) => `${ZAR(r.total_cost)} @ ${ZAR(r.cost_per_litre)}/L`,
           },
           {
             key: "reading",
             label: "Reading",
-            render: (r: any) =>
+            render: (r) =>
               r.odometer
                 ? `${NUM(r.odometer)} km`
                 : r.hours_reading
@@ -407,8 +404,7 @@ function Page() {
           {
             key: "by",
             label: "Filled by",
-            render: (r: any) =>
-              employees.data?.find((e: any) => e.id === r.employee_id)?.full_name ?? "—",
+            render: (r) => employees.data?.find((e) => e.id === r.employee_id)?.full_name ?? "—",
           },
         ]}
         onEdit={openEdit}

@@ -1,6 +1,5 @@
-
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useList, ZAR, NUM, RPT } from "@/lib/reef-db";
+import { useList, ZAR, NUM, RPT, type Row } from "@/lib/reef-db";
 import { useStockOnHand } from "@/hooks/useStock";
 import { byCostPerTonDesc, costPerTon } from "@reef/shared";
 import { PageHeader } from "@/components/PageHeader";
@@ -69,7 +68,19 @@ const COLORS = {
   downtime: "#8b5cf6",
 };
 
-type DataRow = Record<string, any>;
+type DataRow = Record<string, unknown>;
+
+type MonthRow = {
+  key: string;
+  month: string;
+  tons: number;
+  magnetite: number;
+  overtime: number;
+  maintenance: number;
+  statics: number;
+  total: number;
+  rpt: number | null;
+};
 
 function numberValue(value: unknown): number {
   const parsed = Number(value);
@@ -84,11 +95,7 @@ function dateValue(value: unknown): Date | null {
 
 function downtimeDate(row: DataRow): Date | null {
   return dateValue(
-    row.date ??
-      row.event_date ??
-      row.start_time ??
-      row.started_at ??
-      row.created_at,
+    row.date ?? row.event_date ?? row.start_time ?? row.started_at ?? row.created_at,
   );
 }
 
@@ -104,10 +111,7 @@ function downtimeReason(row: DataRow): string {
 }
 
 function downtimeDurationHours(row: DataRow): number | null {
-  const hours =
-    row.duration_hours ??
-    row.downtime_hours ??
-    row.hours_lost;
+  const hours = row.duration_hours ?? row.downtime_hours ?? row.hours_lost;
 
   if (hours !== undefined && hours !== null && Number.isFinite(Number(hours))) {
     return Math.max(0, Number(hours));
@@ -115,11 +119,7 @@ function downtimeDurationHours(row: DataRow): number | null {
 
   const minutes = row.duration_minutes;
 
-  if (
-    minutes !== undefined &&
-    minutes !== null &&
-    Number.isFinite(Number(minutes))
-  ) {
+  if (minutes !== undefined && minutes !== null && Number.isFinite(Number(minutes))) {
     return Math.max(0, Number(minutes) / 60);
   }
 
@@ -134,28 +134,28 @@ function downtimeDurationHours(row: DataRow): number | null {
 }
 
 function Page() {
-  const production = useList<any>("production_logs", "date");
-  const maint = useList<any>("maintenance_logs", "date");
-  const staticCosts = useList<any>("static_costs", "month");
-  const mines = useList<any>("mines");
-  const equipment = useList<any>("equipment");
-  const downtime = useList<any>("downtime_events");
-  const purchaseOrders = useList<any>("purchase_orders");
+  const production = useList<Row<"production_logs">>("production_logs", "date");
+  const maint = useList<Row<"maintenance_logs">>("maintenance_logs", "date");
+  const staticCosts = useList<Row<"static_costs">>("static_costs", "month");
+  const mines = useList<Row<"mines">>("mines");
+  const equipment = useList<Row<"equipment">>("equipment");
+  const downtime = useList<Row<"downtime_events">>("downtime_events");
+  const purchaseOrders = useList<Row<"purchase_orders">>("purchase_orders");
   const stock = useStockOnHand();
 
   const model = useMemo(() => {
     const now = new Date();
-    const productionRows: DataRow[] = production.data ?? [];
-    const maintenanceRows: DataRow[] = maint.data ?? [];
-    const staticCostRows: DataRow[] = staticCosts.data ?? [];
-    const mineRows: DataRow[] = mines.data ?? [];
-    const equipmentRows: DataRow[] = equipment.data ?? [];
-    const downtimeRows: DataRow[] = downtime.data ?? [];
-    const stockRows: DataRow[] = stock.data ?? [];
-    const purchaseOrderRows: DataRow[] = purchaseOrders.data ?? [];
+    const productionRows = production.data ?? [];
+    const maintenanceRows = maint.data ?? [];
+    const staticCostRows = staticCosts.data ?? [];
+    const mineRows = mines.data ?? [];
+    const equipmentRows = equipment.data ?? [];
+    const downtimeRows = downtime.data ?? [];
+    const stockRows = stock.data ?? [];
+    const purchaseOrderRows = purchaseOrders.data ?? [];
 
     // Twelve-month financial and production ledger.
-    const months: DataRow[] = [];
+    const months: MonthRow[] = [];
 
     for (let i = 11; i >= 0; i--) {
       const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -174,16 +174,11 @@ function Page() {
       const monthStaticCosts = staticCostRows.filter((row) => {
         const date = dateValue(row.month);
         return (
-          date &&
-          date.getMonth() === start.getMonth() &&
-          date.getFullYear() === start.getFullYear()
+          date && date.getMonth() === start.getMonth() && date.getFullYear() === start.getFullYear()
         );
       });
 
-      const tons = monthProduction.reduce(
-        (sum, row) => sum + numberValue(row.tons_produced),
-        0,
-      );
+      const tons = monthProduction.reduce((sum, row) => sum + numberValue(row.tons_produced), 0);
 
       const magnetite = monthProduction.reduce(
         (sum, row) => sum + numberValue(row.magnetite_cost),
@@ -200,10 +195,7 @@ function Page() {
         0,
       );
 
-      const statics = monthStaticCosts.reduce(
-        (sum, row) => sum + numberValue(row.amount),
-        0,
-      );
+      const statics = monthStaticCosts.reduce((sum, row) => sum + numberValue(row.amount), 0);
 
       const total = magnetite + overtime + maintenance + statics;
 
@@ -223,9 +215,7 @@ function Page() {
       });
     }
 
-    const activeMonths = months.filter(
-      (month) => month.total > 0 || month.tons > 0,
-    );
+    const activeMonths = months.filter((month) => month.total > 0 || month.tons > 0);
 
     const totals = activeMonths.reduce(
       (sum, month) => ({
@@ -249,20 +239,12 @@ function Page() {
     // Mine-level direct costs. Static costs are not allocated to mines here.
     const perMine = mineRows
       .map((mine) => {
-        const mineProduction = productionRows.filter(
-          (row) => row.mine_id === mine.id,
-        );
+        const mineProduction = productionRows.filter((row) => row.mine_id === mine.id);
 
-        const tons = mineProduction.reduce(
-          (sum, row) => sum + numberValue(row.tons_produced),
-          0,
-        );
+        const tons = mineProduction.reduce((sum, row) => sum + numberValue(row.tons_produced), 0);
 
         const variable = mineProduction.reduce(
-          (sum, row) =>
-            sum +
-            numberValue(row.magnetite_cost) +
-            numberValue(row.overtime_cost),
+          (sum, row) => sum + numberValue(row.magnetite_cost) + numberValue(row.overtime_cost),
           0,
         );
 
@@ -301,20 +283,11 @@ function Page() {
         row,
         hours: downtimeDurationHours(row),
       }))
-      .filter(
-        (item): item is { row: DataRow; hours: number } =>
-          item.hours !== null,
-      );
+      .filter((item): item is typeof item & { hours: number } => item.hours !== null);
 
-    const downtimeHours = downtimeDurations.reduce(
-      (sum, item) => sum + item.hours,
-      0,
-    );
+    const downtimeHours = downtimeDurations.reduce((sum, item) => sum + item.hours, 0);
 
-    const downtimeReasonMap = new Map<
-      string,
-      { reason: string; events: number; hours: number }
-    >();
+    const downtimeReasonMap = new Map<string, { reason: string; events: number; hours: number }>();
 
     downtimeLast30.forEach((row) => {
       const reason = downtimeReason(row);
@@ -351,11 +324,7 @@ function Page() {
 
     const maintenanceThisMonth = maintenanceRows.filter((row) => {
       const date = dateValue(row.date);
-      return (
-        date &&
-        date.getMonth() === now.getMonth() &&
-        date.getFullYear() === now.getFullYear()
-      );
+      return date && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
     });
 
     const maintenanceSpendMTD = maintenanceThisMonth.reduce(
@@ -371,10 +340,7 @@ function Page() {
         if (expectedLife <= 0) return null;
 
         const usedLife = numberValue(item.tons_since_install);
-        const consumed = Math.min(
-          100,
-          Math.max(0, (usedLife / expectedLife) * 100),
-        );
+        const consumed = Math.min(100, Math.max(0, (usedLife / expectedLife) * 100));
 
         return {
           id: item.id,
@@ -384,35 +350,20 @@ function Page() {
           remaining: 100 - consumed,
         };
       })
-      .filter(
-        (
-          item,
-        ): item is {
-          id: string;
-          name: string;
-          mineId: string | undefined;
-          consumed: number;
-          remaining: number;
-        } => item !== null,
-      )
+      .filter((item): item is NonNullable<typeof item> => item !== null)
       .sort((a, b) => a.remaining - b.remaining);
 
-    const equipmentNearEndOfLife = equipmentWear.filter(
-      (item) => item.remaining < 20,
-    );
+    const equipmentNearEndOfLife = equipmentWear.filter((item) => item.remaining < 20);
 
     // Inventory and procurement indicators.
     const lowStock = stockRows.filter(
       (item) => numberValue(item.qty_on_hand) <= numberValue(item.reorder_point),
     );
 
-    const stockouts = stockRows.filter(
-      (item) => numberValue(item.qty_on_hand) <= 0,
-    );
+    const stockouts = stockRows.filter((item) => numberValue(item.qty_on_hand) <= 0);
 
     const inventoryValue = stockRows.reduce(
-      (sum, item) =>
-        sum + numberValue(item.qty_on_hand) * numberValue(item.unit_cost),
+      (sum, item) => sum + numberValue(item.qty_on_hand) * numberValue(item.unit_cost),
       0,
     );
 
@@ -427,8 +378,7 @@ function Page() {
     );
 
     const productionLatestMonth = activeMonths.at(-1);
-    const productionPreviousMonth =
-      activeMonths.length >= 2 ? activeMonths.at(-2) : undefined;
+    const productionPreviousMonth = activeMonths.length >= 2 ? activeMonths.at(-2) : undefined;
 
     const productionChange =
       productionPreviousMonth && productionPreviousMonth.tons > 0
@@ -439,8 +389,7 @@ function Page() {
 
     const variableSpend = totals.magnetite + totals.overtime + totals.maintenance;
 
-    const variableShare =
-      totals.total > 0 ? (variableSpend / totals.total) * 100 : 0;
+    const variableShare = totals.total > 0 ? (variableSpend / totals.total) * 100 : 0;
 
     const managementInsights: string[] = [];
 
@@ -587,8 +536,8 @@ function Page() {
           ))}
 
           <p className="border-t pt-3 text-xs text-muted-foreground">
-            Indicators describe recorded data and do not establish the cause of
-            an operational event or predict future performance.
+            Indicators describe recorded data and do not establish the cause of an operational event
+            or predict future performance.
           </p>
         </CardContent>
       </Card>
@@ -614,32 +563,12 @@ function Page() {
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="month" fontSize={11} />
                     <YAxis fontSize={11} />
-                    <Tooltip formatter={(value: any) => ZAR(value)} />
+                    <Tooltip formatter={(value) => ZAR(Number(value))} />
                     <Legend />
-                    <Bar
-                      dataKey="statics"
-                      stackId="a"
-                      name="Static"
-                      fill={COLORS.statics}
-                    />
-                    <Bar
-                      dataKey="maintenance"
-                      stackId="a"
-                      name="Maintenance"
-                      fill={COLORS.maint}
-                    />
-                    <Bar
-                      dataKey="magnetite"
-                      stackId="a"
-                      name="Magnetite"
-                      fill={COLORS.mag}
-                    />
-                    <Bar
-                      dataKey="overtime"
-                      stackId="a"
-                      name="Overtime"
-                      fill={COLORS.ot}
-                    />
+                    <Bar dataKey="statics" stackId="a" name="Static" fill={COLORS.statics} />
+                    <Bar dataKey="maintenance" stackId="a" name="Maintenance" fill={COLORS.maint} />
+                    <Bar dataKey="magnetite" stackId="a" name="Magnetite" fill={COLORS.mag} />
+                    <Bar dataKey="overtime" stackId="a" name="Overtime" fill={COLORS.ot} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -659,7 +588,7 @@ function Page() {
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="month" fontSize={11} />
                     <YAxis fontSize={11} />
-                    <Tooltip formatter={(value: any) => ZAR(value)} />
+                    <Tooltip formatter={(value) => ZAR(Number(value))} />
                     <Line
                       type="monotone"
                       dataKey="rpt"
@@ -692,7 +621,7 @@ function Page() {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                 <XAxis dataKey="month" fontSize={11} />
                 <YAxis fontSize={11} />
-                <Tooltip formatter={(value: any) => `${NUM(value)} tonnes`} />
+                <Tooltip formatter={(value) => `${NUM(Number(value))} tonnes`} />
                 <Bar
                   dataKey="tons"
                   name="Production"
@@ -712,9 +641,9 @@ function Page() {
         <CardHeader>
           <CardTitle>Direct cost per ton by mine</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Mine-level comparison uses production-linked variable costs and
-            maintenance costs linked through equipment. Static costs are excluded
-            because this calculation does not allocate them to individual mines.
+            Mine-level comparison uses production-linked variable costs and maintenance costs linked
+            through equipment. Static costs are excluded because this calculation does not allocate
+            them to individual mines.
           </p>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -736,21 +665,11 @@ function Page() {
                 {model.perMine.map((mine) => (
                   <TableRow key={mine.id}>
                     <TableCell className="font-medium">{mine.name}</TableCell>
-                    <TableCell className="text-right">
-                      {NUM(mine.tons)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ZAR(mine.variable)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ZAR(mine.maintenance)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ZAR(mine.directCost)}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {RPT(mine.rpt)}
-                    </TableCell>
+                    <TableCell className="text-right">{NUM(mine.tons)}</TableCell>
+                    <TableCell className="text-right">{ZAR(mine.variable)}</TableCell>
+                    <TableCell className="text-right">{ZAR(mine.maintenance)}</TableCell>
+                    <TableCell className="text-right">{ZAR(mine.directCost)}</TableCell>
+                    <TableCell className="text-right font-semibold">{RPT(mine.rpt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -787,30 +706,14 @@ function Page() {
               <TableBody>
                 {model.months.map((month) => (
                   <TableRow key={month.key}>
-                    <TableCell className="font-medium">
-                      {month.month}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {NUM(month.tons)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ZAR(month.statics)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ZAR(month.maintenance)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ZAR(month.magnetite)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ZAR(month.overtime)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {ZAR(month.total)}
-                    </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {RPT(month.rpt)}
-                    </TableCell>
+                    <TableCell className="font-medium">{month.month}</TableCell>
+                    <TableCell className="text-right">{NUM(month.tons)}</TableCell>
+                    <TableCell className="text-right">{ZAR(month.statics)}</TableCell>
+                    <TableCell className="text-right">{ZAR(month.maintenance)}</TableCell>
+                    <TableCell className="text-right">{ZAR(month.magnetite)}</TableCell>
+                    <TableCell className="text-right">{ZAR(month.overtime)}</TableCell>
+                    <TableCell className="text-right">{ZAR(month.total)}</TableCell>
+                    <TableCell className="text-right font-semibold">{RPT(month.rpt)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -834,11 +737,7 @@ function Page() {
           />
           <Stat
             label="Known downtime duration (30d)"
-            value={
-              model.downtimeHasDuration
-                ? `${NUM(model.downtimeHours)} hours`
-                : "Unavailable"
-            }
+            value={model.downtimeHasDuration ? `${NUM(model.downtimeHours)} hours` : "Unavailable"}
             sub={
               model.downtimeHasDuration
                 ? "From recorded duration or start/end fields"
@@ -867,15 +766,8 @@ function Page() {
                 >
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis type="number" fontSize={11} allowDecimals={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="reason"
-                    width={130}
-                    fontSize={11}
-                  />
-                  <Tooltip
-                    formatter={(value: any) => `${NUM(value)} events`}
-                  />
+                  <YAxis type="category" dataKey="reason" width={130} fontSize={11} />
+                  <Tooltip formatter={(value) => `${NUM(Number(value))} events`} />
                   <Bar
                     dataKey="events"
                     name="Events"
@@ -889,9 +781,8 @@ function Page() {
         </Card>
 
         <p className="mt-2 text-xs text-muted-foreground">
-          Downtime duration is only reported when a recognised duration field
-          or valid start/end timestamp pair exists. Event counts are not a
-          substitute for confirmed hours lost.
+          Downtime duration is only reported when a recognised duration field or valid start/end
+          timestamp pair exists. Event counts are not a substitute for confirmed hours lost.
         </p>
       </section>
 
@@ -960,14 +851,9 @@ function Page() {
             ) : (
               <div className="space-y-4">
                 {model.equipmentWear.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-3"
-                  >
+                  <div key={item.id} className="flex items-center gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">
-                        {item.name}
-                      </div>
+                      <div className="truncate text-sm font-medium">{item.name}</div>
                       <div className="mt-1 h-2 overflow-hidden rounded bg-secondary">
                         <div
                           className="h-full rounded"
@@ -986,11 +872,7 @@ function Page() {
                         {Math.round(item.consumed)}% of expected life consumed
                       </div>
                     </div>
-                    <Badge
-                      variant={
-                        item.remaining < 20 ? "destructive" : "secondary"
-                      }
-                    >
+                    <Badge variant={item.remaining < 20 ? "destructive" : "secondary"}>
                       {Math.round(item.remaining)}% remaining
                     </Badge>
                   </div>
@@ -1001,8 +883,8 @@ function Page() {
         </Card>
 
         <p className="mt-2 text-xs text-muted-foreground">
-          This is a tonnage-life indicator, not a utilisation rate. Operating
-          utilisation requires recorded operating hours and available hours.
+          This is a tonnage-life indicator, not a utilisation rate. Operating utilisation requires
+          recorded operating hours and available hours.
         </p>
       </section>
 
@@ -1057,34 +939,21 @@ function Page() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {model.lowStock.map((item: DataRow) => (
+                  {model.lowStock.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium">
-                        {item.name ?? "Unnamed item"}
-                      </TableCell>
+                      <TableCell className="font-medium">{item.name ?? "Unnamed item"}</TableCell>
                       <TableCell className="text-right">
                         {NUM(item.qty_on_hand)} {item.unit ?? ""}
                       </TableCell>
+                      <TableCell className="text-right">{NUM(item.reorder_point)}</TableCell>
                       <TableCell className="text-right">
-                        {NUM(item.reorder_point)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {ZAR(
-                          numberValue(item.qty_on_hand) *
-                            numberValue(item.unit_cost),
-                        )}
+                        {ZAR(numberValue(item.qty_on_hand) * numberValue(item.unit_cost))}
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={
-                            numberValue(item.qty_on_hand) <= 0
-                              ? "destructive"
-                              : "secondary"
-                          }
+                          variant={numberValue(item.qty_on_hand) <= 0 ? "destructive" : "secondary"}
                         >
-                          {numberValue(item.qty_on_hand) <= 0
-                            ? "Stockout"
-                            : "Reorder"}
+                          {numberValue(item.qty_on_hand) <= 0 ? "Stockout" : "Reorder"}
                         </Badge>
                       </TableCell>
                     </TableRow>
@@ -1100,10 +969,7 @@ function Page() {
             <CardTitle>Purchase-order workflow</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <StatusRow
-              label="Draft orders"
-              count={model.draftPurchaseOrders.length}
-            />
+            <StatusRow label="Draft orders" count={model.draftPurchaseOrders.length} />
             <StatusRow
               label="Pending/submitted orders"
               count={model.pendingPurchaseOrders.length}
@@ -1115,13 +981,7 @@ function Page() {
   );
 }
 
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function SectionHeading({ title, description }: { title: string; description: string }) {
   return (
     <div className="mb-3">
       <h2 className="text-base font-semibold">{title}</h2>
@@ -1147,27 +1007,11 @@ function Stat({
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between gap-2">
-          <div className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">
-            {label}
-          </div>
-          <span
-            className={
-              warning ? "text-destructive" : "text-muted-foreground"
-            }
-          >
-            {icon}
-          </span>
+          <div className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
+          <span className={warning ? "text-destructive" : "text-muted-foreground"}>{icon}</span>
         </div>
-        <div
-          className={`text-2xl font-bold ${
-            warning ? "text-destructive" : ""
-          }`}
-        >
-          {value}
-        </div>
-        {sub && (
-          <div className="mt-1 text-xs text-muted-foreground">{sub}</div>
-        )}
+        <div className={`text-2xl font-bold ${warning ? "text-destructive" : ""}`}>{value}</div>
+        {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
       </CardContent>
     </Card>
   );
@@ -1185,9 +1029,7 @@ function StatusRow({
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-sm">{label}</span>
-      <Badge variant={warning && count > 0 ? "destructive" : "secondary"}>
-        {count}
-      </Badge>
+      <Badge variant={warning && count > 0 ? "destructive" : "secondary"}>{count}</Badge>
     </div>
   );
 }

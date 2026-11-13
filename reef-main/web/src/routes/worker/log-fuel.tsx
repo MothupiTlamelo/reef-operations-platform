@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { api } from "@/lib/api";
-import { useList, ZAR } from "@/lib/reef-db";
+import { useList, ZAR, type Row } from "@/lib/reef-db";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -22,8 +22,8 @@ import { Camera } from "lucide-react";
 export const Route = createFileRoute("/worker/log-fuel")({ component: Page });
 
 function Page() {
-  const equipment = useList<any>("equipment", "name", true);
-  const mines = useList<any>("mines", "name", true);
+  const equipment = useList<Row<"equipment">>("equipment", "name", true);
+  const mines = useList<Row<"mines">>("mines", "name", true);
   const [equipId, setEquipId] = useState("");
   const [mineId, setMineId] = useState("");
   const [label, setLabel] = useState("");
@@ -59,7 +59,7 @@ function Page() {
       toast.success("Fuel slip logged");
       navigate({ to: "/worker" });
     },
-    onError: (e: any) => toast.error(e.message ?? "Failed"),
+    onError: (e: Error) => toast.error(e.message ?? "Failed"),
   });
 
   return (
@@ -72,7 +72,7 @@ function Page() {
             <SelectValue placeholder="Select vehicle" />
           </SelectTrigger>
           <SelectContent>
-            {equipment.data?.map((e: any) => (
+            {equipment.data?.map((e) => (
               <SelectItem key={e.id} value={e.id}>
                 {e.name}
               </SelectItem>
@@ -94,7 +94,7 @@ function Page() {
             <SelectValue placeholder="Select mine" />
           </SelectTrigger>
           <SelectContent>
-            {mines.data?.map((m: any) => (
+            {mines.data?.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.name}
               </SelectItem>

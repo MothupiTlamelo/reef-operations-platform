@@ -1,4 +1,3 @@
-
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
@@ -147,9 +146,7 @@ export function AppSidebar() {
         {collapsed ? (
           <div className="flex items-center justify-center py-2">
             <div className="w-8 h-8 rounded bg-sidebar-primary/10 flex items-center justify-center border border-sidebar-primary/30 transition-all hover:bg-sidebar-primary/20 hover:scale-105">
-              <span className="text-sidebar-primary font-display text-lg leading-none">
-                R
-              </span>
+              <span className="text-sidebar-primary font-display text-lg leading-none">R</span>
             </div>
           </div>
         ) : (
@@ -174,9 +171,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {items.map((item, i) => {
-                const active =
-                  currentPath === item.url ||
-                  currentPath.startsWith(item.url + "/");
+                const active = currentPath === item.url || currentPath.startsWith(item.url + "/");
 
                 return (
                   <SidebarMenuItem

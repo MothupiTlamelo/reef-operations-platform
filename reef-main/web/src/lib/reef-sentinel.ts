@@ -1,12 +1,6 @@
-
 type RiskLevel = "High" | "Medium" | "Low";
 
-type RiskCategory =
-  | "Equipment"
-  | "Maintenance"
-  | "Inventory"
-  | "Downtime"
-  | "Production";
+type RiskCategory = "Equipment" | "Maintenance" | "Inventory" | "Downtime" | "Production";
 
 type SentinelRisk = {
   id: string;
@@ -53,40 +47,26 @@ function addDays(date: string, days: number): string | null {
   const timestamp = Date.parse(`${date}T00:00:00Z`);
   if (!Number.isFinite(timestamp)) return null;
 
-  return new Date(timestamp + days * 86_400_000)
-    .toISOString()
-    .slice(0, 10);
+  return new Date(timestamp + days * 86_400_000).toISOString().slice(0, 10);
 }
 
-function maintenanceDue(
-  machine: Row,
-  logs: readonly Row[],
-  today: string,
-): string | null {
+function maintenanceDue(machine: Row, logs: readonly Row[], today: string): string | null {
   const machineId = stringValue(machine.id);
 
   const machineLogs = logs
     .filter((log) => stringValue(log.equipment_id) === machineId)
-    .sort((a, b) =>
-      stringValue(b.date).localeCompare(stringValue(a.date)),
-    );
+    .sort((a, b) => stringValue(b.date).localeCompare(stringValue(a.date)));
 
   const latestLog = machineLogs[0];
 
-  const nextDueDate =
-    stringValue(machine.next_due_date) ||
-    stringValue(latestLog?.next_due_date);
+  const nextDueDate = stringValue(machine.next_due_date) || stringValue(latestLog?.next_due_date);
 
-  const nextDueTons =
-    numberValue(machine.next_due_tons) ??
-    numberValue(latestLog?.next_due_tons);
+  const nextDueTons = numberValue(machine.next_due_tons) ?? numberValue(latestLog?.next_due_tons);
 
   let dueDate = nextDueDate || null;
 
   if (!dueDate) {
-    const lastServiced =
-      stringValue(machine.last_serviced_on) ||
-      stringValue(latestLog?.date);
+    const lastServiced = stringValue(machine.last_serviced_on) || stringValue(latestLog?.date);
 
     const installDate = stringValue(machine.install_date);
     const intervalDays = numberValue(machine.service_interval_days);
@@ -105,23 +85,16 @@ function maintenanceDue(
   }
 
   const tonsUsed = numberValue(machine.tons_since_install) ?? 0;
-  const tonsThreshold =
-    nextDueTons ?? numberValue(machine.service_interval_tons);
+  const tonsThreshold = nextDueTons ?? numberValue(machine.service_interval_tons);
 
-  if (
-    tonsThreshold !== null &&
-    tonsThreshold > 0 &&
-    tonsUsed >= tonsThreshold
-  ) {
+  if (tonsThreshold !== null && tonsThreshold > 0 && tonsUsed >= tonsThreshold) {
     return `Equipment has reached its service tonnage threshold of ${tonsThreshold.toFixed(2)} tons.`;
   }
 
   return null;
 }
 
-export function detectReefRisks(
-  input: DetectReefRisksInput,
-): SentinelRisk[] {
+export function detectReefRisks(input: DetectReefRisksInput): SentinelRisk[] {
   const risks: SentinelRisk[] = [];
   const detectedAt = new Date().toISOString();
   const today = detectedAt.slice(0, 10);
@@ -144,22 +117,14 @@ export function detectReefRisks(
 
     const measurements: Array<{ label: string; percentage: number }> = [];
 
-    if (
-      tonsUsed !== null &&
-      expectedTons !== null &&
-      expectedTons > 0
-    ) {
+    if (tonsUsed !== null && expectedTons !== null && expectedTons > 0) {
       measurements.push({
         label: "expected tonnage",
         percentage: Math.max(0, (tonsUsed / expectedTons) * 100),
       });
     }
 
-    if (
-      hoursUsed !== null &&
-      expectedHours !== null &&
-      expectedHours > 0
-    ) {
+    if (hoursUsed !== null && expectedHours !== null && expectedHours > 0) {
       measurements.push({
         label: "expected operating hours",
         percentage: Math.max(0, (hoursUsed / expectedHours) * 100),
@@ -167,17 +132,10 @@ export function detectReefRisks(
     }
 
     if (measurements.length > 0) {
-      const highest = measurements.reduce((a, b) =>
-        b.percentage > a.percentage ? b : a,
-      );
+      const highest = measurements.reduce((a, b) => (b.percentage > a.percentage ? b : a));
 
       if (highest.percentage >= 80) {
-        const likelihood =
-          highest.percentage >= 100
-            ? 5
-            : highest.percentage >= 90
-              ? 4
-              : 3;
+        const likelihood = highest.percentage >= 100 ? 5 : highest.percentage >= 90 ? 4 : 3;
 
         const impact = highest.percentage >= 100 ? 5 : 4;
         const score = likelihood * impact;
@@ -249,9 +207,7 @@ export function detectReefRisks(
       id: `inventory:${id}`,
       level: riskLevel(score),
       category: "Inventory",
-      title: depleted
-        ? `Stock depleted: ${name}`
-        : `Stock below reorder point: ${name}`,
+      title: depleted ? `Stock depleted: ${name}` : `Stock below reorder point: ${name}`,
       asset: plant ? `${name} · ${plant}` : name,
       evidence: depleted
         ? `No stock remains. Reorder point: ${reorderPoint}.`
@@ -267,9 +223,7 @@ export function detectReefRisks(
     });
   }
 
-  return risks.sort(
-    (a, b) => b.score - a.score || a.title.localeCompare(b.title),
-  );
+  return risks.sort((a, b) => b.score - a.score || a.title.localeCompare(b.title));
 }
 
 export type { RiskLevel, SentinelRisk };

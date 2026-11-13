@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ReasonField, useChangeReason } from "@/components/ReasonField";
 import { useMemo, useState, type FormEvent } from "react";
-import { useList, useUpsert, useRemove, NUM, ZAR } from "@/lib/reef-db";
+import { useList, useUpsert, useRemove, NUM, ZAR, type Row } from "@/lib/reef-db";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
@@ -46,15 +46,15 @@ const SHIFTS = ["morning", "midday", "night"] as const;
 
 // Exported so the test can mount it without going through the router.
 export function Page() {
-  const employees = useList<any>("employees", "full_name", true);
-  const mines = useList<any>("mines", "name", true);
-  const attendance = useList<any>("attendance", "date");
+  const employees = useList<Row<"employees">>("employees", "full_name", true);
+  const mines = useList<Row<"mines">>("mines", "name", true);
+  const attendance = useList<Row<"attendance">>("attendance", "date");
   const upsert = useUpsert("employees");
   const reason = useChangeReason();
   const remove = useRemove("employees");
 
   const [open, setOpen] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
+  const [editing, setEditing] = useState<Row<"employees"> | null>(null);
   const [mineId, setMineId] = useState("none");
   const [shift, setShift] = useState<string>("morning");
   const [filterMine, setFilterMine] = useState("all");
@@ -66,7 +66,7 @@ export function Page() {
     setShift("morning");
     setOpen(true);
   };
-  const openEdit = (r: any) => {
+  const openEdit = (r: Row<"employees">) => {
     setEditing(r);
     setMineId(r.mine_id ?? "none");
     setShift(r.shift);
@@ -98,7 +98,7 @@ export function Page() {
       hourly_rate: Number(f.get("hourly_rate") || 0),
       notes: f.get("notes") || null,
       active: true,
-    })) as any;
+    })) as { id: string };
 
     if (idNumber) {
       const { error } = await supabase.rpc("set_employee_id_number", {
@@ -117,7 +117,7 @@ export function Page() {
   const rows = useMemo(
     () =>
       (employees.data ?? []).filter(
-        (e: any) =>
+        (e) =>
           (filterMine === "all" || e.mine_id === filterMine) &&
           (filterShift === "all" || e.shift === filterShift),
       ),
@@ -128,16 +128,16 @@ export function Page() {
     const att = attendance.data ?? [];
     return SHIFTS.map((s) => {
       const list = att.filter(
-        (a: any) => a.shift === s && (filterMine === "all" || a.mine_id === filterMine),
+        (a) => a.shift === s && (filterMine === "all" || a.mine_id === filterMine),
       );
       return {
         shift: s,
         crew: (employees.data ?? []).filter(
-          (e: any) => e.shift === s && (filterMine === "all" || e.mine_id === filterMine),
+          (e) => e.shift === s && (filterMine === "all" || e.mine_id === filterMine),
         ).length,
-        tons: list.reduce((n: number, a: any) => n + Number(a.tons_contributed ?? 0), 0),
+        tons: list.reduce((n: number, a) => n + Number(a.tons_contributed ?? 0), 0),
         hours: list.reduce(
-          (n: number, a: any) => n + Number(a.hours_worked ?? 0) + Number(a.overtime_hours ?? 0),
+          (n: number, a) => n + Number(a.hours_worked ?? 0) + Number(a.overtime_hours ?? 0),
           0,
         ),
       };
@@ -145,7 +145,7 @@ export function Page() {
   }, [attendance.data, employees.data, filterMine]);
 
   const mineName = (id: string | null) =>
-    mines.data?.find((m: any) => m.id === id)?.name ?? "Unassigned";
+    mines.data?.find((m) => m.id === id)?.name ?? "Unassigned";
 
   return (
     <div>
@@ -186,7 +186,7 @@ export function Page() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All mines</SelectItem>
-            {mines.data?.map((m: any) => (
+            {mines.data?.map((m) => (
               <SelectItem key={m.id} value={m.id}>
                 {m.name}
               </SelectItem>
@@ -244,7 +244,7 @@ export function Page() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Unassigned</SelectItem>
-                    {mines.data?.map((m: any) => (
+                    {mines.data?.map((m) => (
                       <SelectItem key={m.id} value={m.id}>
                         {m.name}
                       </SelectItem>
@@ -302,7 +302,7 @@ export function Page() {
           {
             key: "full_name",
             label: "Worker",
-            render: (r: any) => (
+            render: (r) => (
               <Link
                 to="/employees/$employeeId"
                 params={{ employeeId: r.id }}
@@ -315,18 +315,18 @@ export function Page() {
               </Link>
             ),
           },
-          { key: "mine", label: "Mine", render: (r: any) => mineName(r.mine_id) },
+          { key: "mine", label: "Mine", render: (r) => mineName(r.mine_id) },
           {
             key: "shift",
             label: "Shift",
-            render: (r: any) => (
+            render: (r) => (
               <Badge variant="secondary" className="capitalize">
                 {r.shift}
               </Badge>
             ),
           },
-          { key: "team_name", label: "Team", render: (r: any) => r.team_name ?? "—" },
-          { key: "hourly_rate", label: "Rate", render: (r: any) => ZAR(r.hourly_rate) + "/h" },
+          { key: "team_name", label: "Team", render: (r) => r.team_name ?? "—" },
+          { key: "hourly_rate", label: "Rate", render: (r) => ZAR(r.hourly_rate) + "/h" },
         ]}
         onEdit={openEdit}
         onDelete={(r) => remove.mutate(r.id)}

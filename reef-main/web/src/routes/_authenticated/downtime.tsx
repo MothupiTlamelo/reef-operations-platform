@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useList } from "@/lib/reef-db";
+import { useList, type Row } from "@/lib/reef-db";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { Badge } from "@/components/ui/badge";
@@ -18,9 +18,9 @@ const REASON_LABEL: Record<string, string> = {
 };
 
 function Page() {
-  const list = useList<any>("downtime_events", "start_time");
-  const mines = useList<any>("mines");
-  const equipment = useList<any>("equipment");
+  const list = useList<Row<"downtime_events">>("downtime_events", "start_time");
+  const mines = useList<Row<"mines">>("mines");
+  const equipment = useList<Row<"equipment">>("equipment");
 
   const byReason = useMemo(() => {
     const map: Record<string, number> = {};
@@ -62,7 +62,7 @@ function Page() {
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis dataKey="reason" fontSize={11} />
                   <YAxis fontSize={11} />
-                  <Tooltip formatter={(v: any) => `${v} h`} />
+                  <Tooltip formatter={(v) => `${v} h`} />
                   <Bar dataKey="hours" fill="#ef4444" />
                 </BarChart>
               </ResponsiveContainer>
@@ -76,17 +76,17 @@ function Page() {
           {
             key: "start_time",
             label: "When",
-            render: (r: any) => new Date(r.start_time).toLocaleString(),
+            render: (r) => new Date(r.start_time).toLocaleString(),
           },
           {
             key: "mine",
             label: "Mine",
-            render: (r: any) => mines.data?.find((m) => m.id === r.mine_id)?.name ?? "—",
+            render: (r) => mines.data?.find((m) => m.id === r.mine_id)?.name ?? "—",
           },
           {
             key: "reason",
             label: "Reason",
-            render: (r: any) => (
+            render: (r) => (
               <Badge
                 variant={
                   r.reason === "breakdown" || r.reason === "no_stock" ? "destructive" : "secondary"
@@ -99,12 +99,12 @@ function Page() {
           {
             key: "equipment",
             label: "Equipment",
-            render: (r: any) => equipment.data?.find((e) => e.id === r.equipment_id)?.name ?? "—",
+            render: (r) => equipment.data?.find((e) => e.id === r.equipment_id)?.name ?? "—",
           },
           {
             key: "duration_hours",
             label: "Hours",
-            render: (r: any) => `${Number(r.duration_hours).toFixed(1)} h`,
+            render: (r) => `${Number(r.duration_hours).toFixed(1)} h`,
           },
           { key: "notes", label: "Notes" },
         ]}

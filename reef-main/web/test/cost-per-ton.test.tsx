@@ -51,23 +51,39 @@ describe("T18: cost per ton when nothing was produced", () => {
   });
 
   it("shows 'No production' for a site that produced nothing, not R 0", async () => {
-    production = [{ id: "p1", mine_id: KRIEL.id, date: thisMonth, tons_produced: 400, magnetite_cost: 8000, overtime_cost: 0 }];
+    production = [
+      {
+        id: "p1",
+        mine_id: KRIEL.id,
+        date: thisMonth,
+        tons_produced: 400,
+        magnetite_cost: 8000,
+        overtime_cost: 0,
+      },
+    ];
     await renderScreen(await pageOf("analytics"));
-    const table = (await screen.findByText("Direct cost per ton by mine")).closest("div[class*='card'], .rounded-lg, section") ?? document.body;
+    const table =
+      (await screen.findByText("Direct cost per ton by mine")).closest(
+        "div[class*='card'], .rounded-lg, section",
+      ) ?? document.body;
 
     // The last cell of each row is the R / ton column.
     const rate = (row: Element) => [...row.querySelectorAll("td")].at(-1)?.textContent;
     const ogies = (await within(table as HTMLElement).findByText("Ogies")).closest("tr")!;
     expect(rate(ogies)).toBe("No production");
 
-    const kriel = within(table as HTMLElement).getByText("Kriel").closest("tr")!;
+    const kriel = within(table as HTMLElement)
+      .getByText("Kriel")
+      .closest("tr")!;
     expect(rate(kriel)).toMatch(/^R\s*20$/);
   });
 
   it("shows 'No production' on the dashboard's rand-per-ton card when this month has no tonnes", async () => {
     production = [];
     await renderScreen(await pageOf("dashboard"));
-    const card = (await screen.findByText(/Rand \/ Ton \(MTD\)/i)).closest("a, div")!.parentElement!;
+    const card = (await screen.findByText(/Rand \/ Ton \(MTD\)/i)).closest(
+      "a, div",
+    )!.parentElement!;
     expect(card.textContent).toContain("No production");
   });
 });

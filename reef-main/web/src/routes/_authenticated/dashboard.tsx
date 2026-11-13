@@ -1,6 +1,5 @@
-
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useList, ZAR, NUM, RPT } from "@/lib/reef-db";
+import { useList, ZAR, NUM, RPT, type Row, poRef } from "@/lib/reef-db";
 import { useStockOnHand } from "@/hooks/useStock";
 import { costPerTon } from "@reef/shared";
 import { PageHeader } from "@/components/PageHeader";
@@ -48,7 +47,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
 });
 
-type DataRow = Record<string, any>;
+type DataRow = Record<string, unknown>;
 
 const CHART_COLORS = ["#f59e0b", "#3b82f6", "#10b981", "#ef4444", "#8b5cf6"];
 
@@ -64,13 +63,7 @@ function asDate(value: unknown): Date | null {
 }
 
 function getDowntimeDate(row: DataRow): Date | null {
-  return asDate(
-    row.date ??
-      row.event_date ??
-      row.start_time ??
-      row.started_at ??
-      row.created_at,
-  );
+  return asDate(row.date ?? row.event_date ?? row.start_time ?? row.started_at ?? row.created_at);
 }
 
 function getDowntimeReason(row: DataRow): string {
@@ -85,10 +78,7 @@ function getDowntimeReason(row: DataRow): string {
 }
 
 function getDowntimeHours(row: DataRow): number | null {
-  const hours =
-    row.duration_hours ??
-    row.downtime_hours ??
-    row.hours_lost;
+  const hours = row.duration_hours ?? row.downtime_hours ?? row.hours_lost;
 
   if (hours !== undefined && hours !== null && Number.isFinite(Number(hours))) {
     return Math.max(0, Number(hours));
@@ -110,38 +100,34 @@ function getDowntimeHours(row: DataRow): number | null {
 }
 
 function Dashboard() {
-  const production = useList<any>("production_logs", "date");
-  const maint = useList<any>("maintenance_logs", "date");
+  const production = useList<Row<"production_logs">>("production_logs", "date");
+  const maint = useList<Row<"maintenance_logs">>("maintenance_logs", "date");
   const stock = useStockOnHand();
-  const pos = useList<any>("purchase_orders");
-  const staticCosts = useList<any>("static_costs", "month");
-  const mines = useList<any>("mines");
-  const equipment = useList<any>("equipment");
-  const downtime = useList<any>("downtime_events");
+  const pos = useList<Row<"purchase_orders">>("purchase_orders");
+  const staticCosts = useList<Row<"static_costs">>("static_costs", "month");
+  const mines = useList<Row<"mines">>("mines");
+  const equipment = useList<Row<"equipment">>("equipment");
+  const downtime = useList<Row<"downtime_events">>("downtime_events");
 
   const stats = useMemo(() => {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
     const previousMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const previousMonthDays = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      0,
-    ).getDate();
+    const previousMonthDays = new Date(now.getFullYear(), now.getMonth(), 0).getDate();
     const comparablePreviousEnd = new Date(
       previousMonthStart.getFullYear(),
       previousMonthStart.getMonth(),
       Math.min(now.getDate(), previousMonthDays) + 1,
     );
 
-    const productionRows: DataRow[] = production.data ?? [];
-    const maintenanceRows: DataRow[] = maint.data ?? [];
-    const stockRows: DataRow[] = stock.data ?? [];
-    const purchaseOrders: DataRow[] = pos.data ?? [];
-    const staticCostRows: DataRow[] = staticCosts.data ?? [];
-    const mineRows: DataRow[] = mines.data ?? [];
-    const equipmentRows: DataRow[] = equipment.data ?? [];
-    const downtimeRows: DataRow[] = downtime.data ?? [];
+    const productionRows = production.data ?? [];
+    const maintenanceRows = maint.data ?? [];
+    const stockRows = stock.data ?? [];
+    const purchaseOrders = pos.data ?? [];
+    const staticCostRows = staticCosts.data ?? [];
+    const mineRows = mines.data ?? [];
+    const equipmentRows = equipment.data ?? [];
+    const downtimeRows = downtime.data ?? [];
 
     const productionMTD = productionRows.filter((row) => {
       const date = asDate(row.date);
@@ -150,17 +136,10 @@ function Dashboard() {
 
     const productionPreviousComparable = productionRows.filter((row) => {
       const date = asDate(row.date);
-      return (
-        date &&
-        date >= previousMonthStart &&
-        date < comparablePreviousEnd
-      );
+      return date && date >= previousMonthStart && date < comparablePreviousEnd;
     });
 
-    const tonsMTD = productionMTD.reduce(
-      (sum, row) => sum + asNumber(row.tons_produced),
-      0,
-    );
+    const tonsMTD = productionMTD.reduce((sum, row) => sum + asNumber(row.tons_produced), 0);
 
     const tonsPreviousComparable = productionPreviousComparable.reduce(
       (sum, row) => sum + asNumber(row.tons_produced),
@@ -177,43 +156,30 @@ function Dashboard() {
       return date && date >= monthStart && date <= now;
     });
 
-    const maintenanceSpend = maintenanceMTD.reduce(
-      (sum, row) => sum + asNumber(row.total_cost),
-      0,
-    );
+    const maintenanceSpend = maintenanceMTD.reduce((sum, row) => sum + asNumber(row.total_cost), 0);
 
     const magnetiteSpend = productionMTD.reduce(
       (sum, row) => sum + asNumber(row.magnetite_cost),
       0,
     );
 
-    const overtimeSpend = productionMTD.reduce(
-      (sum, row) => sum + asNumber(row.overtime_cost),
-      0,
-    );
+    const overtimeSpend = productionMTD.reduce((sum, row) => sum + asNumber(row.overtime_cost), 0);
 
     const staticSpendMTD = staticCostRows
       .filter((row) => {
         const date = asDate(row.month);
         return (
-          date &&
-          date.getMonth() === now.getMonth() &&
-          date.getFullYear() === now.getFullYear()
+          date && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
         );
       })
       .reduce((sum, row) => sum + asNumber(row.amount), 0);
 
-    const totalCostMTD =
-      maintenanceSpend +
-      magnetiteSpend +
-      overtimeSpend +
-      staticSpendMTD;
+    const totalCostMTD = maintenanceSpend + magnetiteSpend + overtimeSpend + staticSpendMTD;
 
     const rpt = costPerTon(totalCostMTD, tonsMTD);
 
     const inventoryValue = stockRows.reduce(
-      (sum, item) =>
-        sum + asNumber(item.qty_on_hand) * asNumber(item.unit_cost),
+      (sum, item) => sum + asNumber(item.qty_on_hand) * asNumber(item.unit_cost),
       0,
     );
 
@@ -221,9 +187,7 @@ function Dashboard() {
       (item) => asNumber(item.qty_on_hand) <= asNumber(item.reorder_point),
     );
 
-    const stockoutItems = stockRows.filter(
-      (item) => asNumber(item.qty_on_hand) <= 0,
-    );
+    const stockoutItems = stockRows.filter((item) => asNumber(item.qty_on_hand) <= 0);
 
     const draftPOs = purchaseOrders.filter(
       (order) => String(order.status ?? "").toLowerCase() === "draft",
@@ -253,15 +217,9 @@ function Dashboard() {
         row,
         hours: getDowntimeHours(row),
       }))
-      .filter(
-        (item): item is { row: DataRow; hours: number } =>
-          item.hours !== null,
-      );
+      .filter((item): item is typeof item & { hours: number } => item.hours !== null);
 
-    const downtimeHours30 = downtimeWithDuration.reduce(
-      (sum, item) => sum + item.hours,
-      0,
-    );
+    const downtimeHours30 = downtimeWithDuration.reduce((sum, item) => sum + item.hours, 0);
 
     const downtimeByReasonMap = new Map<
       string,
@@ -313,9 +271,7 @@ function Dashboard() {
       const monthStaticCosts = staticCostRows.filter((row) => {
         const date = asDate(row.month);
         return (
-          date &&
-          date.getMonth() === start.getMonth() &&
-          date.getFullYear() === start.getFullYear()
+          date && date.getMonth() === start.getMonth() && date.getFullYear() === start.getFullYear()
         );
       });
 
@@ -339,16 +295,10 @@ function Dashboard() {
         0,
       );
 
-      const monthStaticSpend = monthStaticCosts.reduce(
-        (sum, row) => sum + asNumber(row.amount),
-        0,
-      );
+      const monthStaticSpend = monthStaticCosts.reduce((sum, row) => sum + asNumber(row.amount), 0);
 
       const monthTotalCost =
-        monthMagnetite +
-        monthOvertime +
-        monthMaintenanceSpend +
-        monthStaticSpend;
+        monthMagnetite + monthOvertime + monthMaintenanceSpend + monthStaticSpend;
 
       const label = start.toLocaleString("en-ZA", {
         month: "short",
@@ -358,8 +308,7 @@ function Dashboard() {
       monthlyProduction.push({
         month: label,
         tonnes: monthTonnes,
-        costPerTon:
-          monthTonnes > 0 ? Math.round(monthTotalCost / monthTonnes) : null,
+        costPerTon: monthTonnes > 0 ? Math.round(monthTotalCost / monthTonnes) : null,
       });
 
       costTrend.push({
@@ -373,12 +322,7 @@ function Dashboard() {
         const tonnes = productionRows
           .filter((row) => {
             const date = asDate(row.date);
-            return (
-              row.mine_id === mine.id &&
-              date &&
-              date >= cutoff30 &&
-              date <= now
-            );
+            return row.mine_id === mine.id && date && date >= cutoff30 && date <= now;
           })
           .reduce((sum, row) => sum + asNumber(row.tons_produced), 0);
 
@@ -393,10 +337,7 @@ function Dashboard() {
 
         if (expectedLife <= 0) return null;
 
-        const consumed = Math.min(
-          100,
-          Math.max(0, (usedLife / expectedLife) * 100),
-        );
+        const consumed = Math.min(100, Math.max(0, (usedLife / expectedLife) * 100));
 
         return {
           id: item.id,
@@ -503,9 +444,7 @@ function Dashboard() {
     downtime.data,
   ]);
 
-  const [drill, setDrill] = useState<
-    null | "po" | "stock" | "maint" | "downtime"
-  >(null);
+  const [drill, setDrill] = useState<null | "po" | "stock" | "maint" | "downtime">(null);
 
   const navigate = useNavigate();
 
@@ -633,9 +572,7 @@ function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="month" fontSize={11} />
                     <YAxis fontSize={11} />
-                    <Tooltip
-                      formatter={(value: any) => `${NUM(value)} tonnes`}
-                    />
+                    <Tooltip formatter={(value) => `${NUM(Number(value))} tonnes`} />
                     <Bar
                       dataKey="tonnes"
                       name="Production"
@@ -661,9 +598,7 @@ function Dashboard() {
                     <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                     <XAxis dataKey="month" fontSize={11} />
                     <YAxis fontSize={11} />
-                    <Tooltip
-                      formatter={(value: any) => ZAR(value)}
-                    />
+                    <Tooltip formatter={(value) => ZAR(Number(value))} />
                     <Line
                       type="monotone"
                       dataKey="rpt"
@@ -688,10 +623,7 @@ function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>
-              <Link
-                to="/mines"
-                className="transition-colors hover:text-primary"
-              >
+              <Link to="/mines" className="transition-colors hover:text-primary">
                 Production by mine — last 30 days →
               </Link>
             </CardTitle>
@@ -705,15 +637,8 @@ function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis dataKey="name" fontSize={11} />
                   <YAxis fontSize={11} />
-                  <Tooltip
-                    formatter={(value: any) => `${NUM(value)} tonnes`}
-                  />
-                  <Bar
-                    dataKey="tonnes"
-                    name="Production"
-                    fill={COLORS[2]}
-                    radius={[4, 4, 0, 0]}
-                  />
+                  <Tooltip formatter={(value) => `${NUM(Number(value))} tonnes`} />
+                  <Bar dataKey="tonnes" name="Production" fill={COLORS[2]} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -723,10 +648,7 @@ function Dashboard() {
         <Card>
           <CardHeader>
             <CardTitle>
-              <Link
-                to="/analytics"
-                className="transition-colors hover:text-primary"
-              >
+              <Link to="/analytics" className="transition-colors hover:text-primary">
                 Cost breakdown — month to date →
               </Link>
             </CardTitle>
@@ -745,14 +667,11 @@ function Dashboard() {
                     label
                   >
                     {stats.costBreakdown.map((_, index) => (
-                      <Cell
-                        key={index}
-                        fill={COLORS[index % COLORS.length]}
-                      />
+                      <Cell key={index} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
                   <Legend />
-                  <Tooltip formatter={(value: any) => ZAR(value)} />
+                  <Tooltip formatter={(value) => ZAR(Number(value))} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -778,9 +697,7 @@ function Dashboard() {
             icon={<Activity className="h-5 w-5" />}
             label="Known downtime duration"
             value={
-              stats.downtimeHasDuration
-                ? `${NUM(stats.downtimeHours30)} hours`
-                : "Not available"
+              stats.downtimeHasDuration ? `${NUM(stats.downtimeHours30)} hours` : "Not available"
             }
             description={
               stats.downtimeHasDuration
@@ -806,21 +723,9 @@ function Dashboard() {
                 >
                   <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                   <XAxis type="number" fontSize={11} allowDecimals={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="reason"
-                    width={115}
-                    fontSize={11}
-                  />
-                  <Tooltip
-                    formatter={(value: any) => `${NUM(value)} event(s)`}
-                  />
-                  <Bar
-                    dataKey="events"
-                    name="Events"
-                    fill={COLORS[3]}
-                    radius={[0, 4, 4, 0]}
-                  />
+                  <YAxis type="category" dataKey="reason" width={115} fontSize={11} />
+                  <Tooltip formatter={(value) => `${NUM(Number(value))} event(s)`} />
+                  <Bar dataKey="events" name="Events" fill={COLORS[3]} radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -860,10 +765,7 @@ function Dashboard() {
         <Card className="mt-4">
           <CardHeader>
             <CardTitle>
-              <Link
-                to="/equipment"
-                className="transition-colors hover:text-primary"
-              >
+              <Link to="/equipment" className="transition-colors hover:text-primary">
                 Equipment lifecycle — lowest remaining life →
               </Link>
             </CardTitle>
@@ -883,9 +785,7 @@ function Dashboard() {
                     className="flex cursor-pointer items-center gap-3 rounded-md p-1 transition-colors hover:bg-muted/50"
                   >
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">
-                        {item.name}
-                      </div>
+                      <div className="truncate text-sm font-medium">{item.name}</div>
                       <div className="mt-1 h-2 w-full overflow-hidden rounded bg-secondary">
                         <div
                           className="h-full rounded"
@@ -904,11 +804,7 @@ function Dashboard() {
                         {Math.round(item.consumed)}% of expected life consumed
                       </div>
                     </div>
-                    <Badge
-                      variant={
-                        item.remaining < 20 ? "destructive" : "secondary"
-                      }
-                    >
+                    <Badge variant={item.remaining < 20 ? "destructive" : "secondary"}>
                       {Math.round(item.remaining)}% remaining
                     </Badge>
                   </li>
@@ -919,9 +815,8 @@ function Dashboard() {
         </Card>
 
         <p className="mt-2 text-xs text-muted-foreground">
-          Operating-hour utilisation is not calculated here because the dashboard
-          source currently does not establish both operating hours and available
-          hours for each asset.
+          Operating-hour utilisation is not calculated here because the dashboard source currently
+          does not establish both operating hours and available hours for each asset.
         </p>
       </section>
 
@@ -985,14 +880,12 @@ function Dashboard() {
               (stats.lowStock.length === 0 ? (
                 <Empty text="Everything is above its reorder point." />
               ) : (
-                stats.lowStock.map((item: DataRow) => (
+                stats.lowStock.map((item) => (
                   <DrillRow
                     key={item.id}
                     title={item.name ?? "Unnamed stock item"}
                     sub={`On hand ${NUM(item.qty_on_hand)} ${item.unit ?? ""} · reorder at ${NUM(item.reorder_point)}`}
-                    right={ZAR(
-                      asNumber(item.qty_on_hand) * asNumber(item.unit_cost),
-                    )}
+                    right={ZAR(asNumber(item.qty_on_hand) * asNumber(item.unit_cost))}
                   />
                 ))
               ))}
@@ -1001,7 +894,7 @@ function Dashboard() {
               (stats.overdueMaintenance.length === 0 ? (
                 <Empty text="No overdue maintenance records." />
               ) : (
-                stats.overdueMaintenance.map((row: DataRow) => (
+                stats.overdueMaintenance.map((row) => (
                   <DrillRow
                     key={row.id}
                     title={row.description ?? "Maintenance record"}
@@ -1015,15 +908,12 @@ function Dashboard() {
               (stats.draftPOs.length === 0 ? (
                 <Empty text="No draft purchase orders." />
               ) : (
-                stats.draftPOs.map((order: DataRow) => (
+                stats.draftPOs.map((order) => (
                   <DrillRow
                     key={order.id}
-                    title={
-                      order.po_number ??
-                      `PO ${String(order.id ?? "").slice(0, 8)}`
-                    }
+                    title={poRef(order.id)}
                     sub={`Created ${asDate(order.created_at)?.toLocaleDateString() ?? "Unknown date"}`}
-                    right={ZAR(order.total_cost ?? order.total ?? 0)}
+                    right={ZAR(order.total_cost)}
                   />
                 ))
               ))}
@@ -1032,19 +922,14 @@ function Dashboard() {
               (stats.downtimeLast30.length === 0 ? (
                 <Empty text="No downtime events recorded in the last 30 days." />
               ) : (
-                stats.downtimeLast30.map((row: DataRow, index: number) => {
+                stats.downtimeLast30.map((row, index: number) => {
                   const hours = getDowntimeHours(row);
                   return (
                     <DrillRow
                       key={row.id ?? index}
                       title={getDowntimeReason(row)}
-                      sub={
-                        getDowntimeDate(row)?.toLocaleString() ??
-                        "Date not recorded"
-                      }
-                      right={
-                        hours === null ? "Duration unavailable" : `${NUM(hours)} h`
-                      }
+                      sub={getDowntimeDate(row)?.toLocaleString() ?? "Date not recorded"}
+                      right={hours === null ? "Duration unavailable" : `${NUM(hours)} h`}
                     />
                   );
                 })
@@ -1083,13 +968,7 @@ function Dashboard() {
   );
 }
 
-function SectionHeading({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
+function SectionHeading({ title, description }: { title: string; description: string }) {
   return (
     <div className="mb-3">
       <h2 className="text-base font-semibold">{title}</h2>
@@ -1121,15 +1000,11 @@ function StatCard({
     >
       <CardContent className="p-4">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wider text-muted-foreground">
-            {label}
-          </span>
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
           <span className="text-muted-foreground">{icon}</span>
         </div>
         <div className="text-2xl font-bold">{value}</div>
-        {sub && (
-          <div className="mt-1 text-xs text-muted-foreground">{sub}</div>
-        )}
+        {sub && <div className="mt-1 text-xs text-muted-foreground">{sub}</div>}
       </CardContent>
     </Card>
   );
@@ -1211,12 +1086,8 @@ function MetricPanel({
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wider text-muted-foreground">
-            {label}
-          </span>
-          <span className={warning ? "text-destructive" : "text-muted-foreground"}>
-            {icon}
-          </span>
+          <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
+          <span className={warning ? "text-destructive" : "text-muted-foreground"}>{icon}</span>
         </div>
         <div className={`mt-2 text-2xl font-bold ${warning ? "text-destructive" : ""}`}>
           {value}
@@ -1227,22 +1098,12 @@ function MetricPanel({
   );
 }
 
-function DrillRow({
-  title,
-  sub,
-  right,
-}: {
-  title: string;
-  sub?: string;
-  right?: string;
-}) {
+function DrillRow({ title, sub, right }: { title: string; sub?: string; right?: string }) {
   return (
     <div className="flex items-center gap-3 rounded-md border bg-card p-3">
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-medium">{title}</div>
-        {sub && (
-          <div className="truncate text-xs text-muted-foreground">{sub}</div>
-        )}
+        {sub && <div className="truncate text-xs text-muted-foreground">{sub}</div>}
       </div>
       {right && <div className="shrink-0 text-sm font-semibold">{right}</div>}
     </div>
@@ -1251,9 +1112,7 @@ function DrillRow({
 
 function Empty({ text }: { text: string }) {
   return (
-    <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">
-      {text}
-    </div>
+    <div className="rounded-md border py-8 text-center text-sm text-muted-foreground">{text}</div>
   );
 }
 

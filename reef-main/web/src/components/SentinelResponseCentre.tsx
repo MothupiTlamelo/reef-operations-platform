@@ -20,13 +20,7 @@ import type { SentinelRisk } from "@/lib/reef-sentinel";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -35,6 +29,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+// The Sentinel tables (migration 20261111100000) are not in the generated Supabase types yet.
+// Regenerate types.ts and this cast can go.
+const sentinelDb = supabase as unknown as SupabaseClient;
 
 type ResponseStatus = "open" | "in_progress" | "blocked" | "resolved";
 
@@ -109,10 +108,7 @@ function getRiskIdentity(risk: SentinelRisk): {
 
   if (!entityId) return null;
 
-  if (
-    riskType === "equipment_lifespan" ||
-    riskType === "maintenance_overdue"
-  ) {
+  if (riskType === "equipment_lifespan" || riskType === "maintenance_overdue") {
     return {
       riskType,
       entityType: "equipment",
@@ -144,16 +140,12 @@ function formatDate(value: string | null | undefined) {
   }).format(date);
 }
 
-function ResponseHistoryPanel({
-  responseId,
-}: {
-  responseId: string;
-}) {
+function ResponseHistoryPanel({ responseId }: { responseId: string }) {
   const history = useQuery({
     queryKey: ["sentinel-response-history", responseId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sentinel_response_history" as any)
+      const { data, error } = await sentinelDb
+        .from("sentinel_response_history")
         .select("*")
         .eq("response_id", responseId)
         .order("created_at", { ascending: false });
@@ -192,16 +184,11 @@ function ResponseHistoryPanel({
   return (
     <div className="space-y-3">
       {history.data.map((event) => (
-        <div
-          key={event.id}
-          className="relative border-l border-border pl-4"
-        >
+        <div key={event.id} className="relative border-l border-border pl-4">
           <span className="absolute -left-[5px] top-1 h-2 w-2 rounded-full bg-primary" />
 
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold">
-              {event.event_type.replaceAll("_", " ")}
-            </p>
+            <p className="text-xs font-semibold">{event.event_type.replaceAll("_", " ")}</p>
             <span className="text-[10px] text-muted-foreground">
               {formatDate(event.created_at)}
             </span>
@@ -237,13 +224,7 @@ function ResponseHistoryPanel({
   );
 }
 
-function ResponseEditor({
-  risk,
-  response,
-}: {
-  risk: SentinelRisk;
-  response?: SentinelResponse;
-}) {
+function ResponseEditor({ risk, response }: { risk: SentinelRisk; response?: SentinelResponse }) {
   const queryClient = useQueryClient();
 
   const [draft, setDraft] = useState<ResponseDraft>({
@@ -275,9 +256,7 @@ function ResponseEditor({
   const saveResponse = useMutation({
     mutationFn: async () => {
       if (!identity) {
-        throw new Error(
-          "This finding does not have a supported response type.",
-        );
+        throw new Error("This finding does not have a supported response type.");
       }
 
       const payload = {
@@ -291,8 +270,8 @@ function ResponseEditor({
         response_notes: draft.notes.trim() || null,
       };
 
-      const { data, error } = await supabase
-        .from("sentinel_responses" as any)
+      const { data, error } = await sentinelDb
+        .from("sentinel_responses")
         .upsert(payload, { onConflict: "risk_key" })
         .select("*")
         .single();
@@ -338,9 +317,7 @@ function ResponseEditor({
         </div>
 
         {response ? (
-          <Badge variant={statusVariant(response.status)}>
-            {statusLabels[response.status]}
-          </Badge>
+          <Badge variant={statusVariant(response.status)}>{statusLabels[response.status]}</Badge>
         ) : (
           <Badge variant="outline">Not yet recorded</Badge>
         )}
@@ -411,8 +388,8 @@ function ResponseEditor({
         />
 
         <p className="text-[10px] leading-relaxed text-muted-foreground">
-          The UUID must belong to a valid user who is permitted to be assigned
-          to this response. Leave blank to remove the assignment.
+          The UUID must belong to a valid user who is permitted to be assigned to this response.
+          Leave blank to remove the assignment.
         </p>
       </div>
 
@@ -487,16 +464,12 @@ function ResponseEditor({
   );
 }
 
-export function SentinelResponseCentre({
-  risks,
-}: {
-  risks: SentinelRisk[];
-}) {
+export function SentinelResponseCentre({ risks }: { risks: SentinelRisk[] }) {
   const responses = useQuery({
     queryKey: ["sentinel-responses"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("sentinel_responses" as any)
+      const { data, error } = await sentinelDb
+        .from("sentinel_responses")
         .select("*")
         .order("updated_at", { ascending: false });
 
@@ -516,10 +489,7 @@ export function SentinelResponseCentre({
     return result;
   }, [responses.data]);
 
-  const orderedRisks = useMemo(
-    () => [...risks].sort((a, b) => b.score - a.score),
-    [risks],
-  );
+  const orderedRisks = useMemo(() => [...risks].sort((a, b) => b.score - a.score), [risks]);
 
   const responseCounts = useMemo(() => {
     const counts = {
@@ -553,9 +523,7 @@ export function SentinelResponseCentre({
         <CardContent className="flex items-start gap-3 py-6">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
           <div>
-            <p className="font-semibold">
-              Could not load the Response Centre.
-            </p>
+            <p className="font-semibold">Could not load the Response Centre.</p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
               {responses.error.message}
             </p>
@@ -581,9 +549,7 @@ export function SentinelResponseCentre({
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Open
             </p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {responseCounts.open}
-            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">{responseCounts.open}</p>
           </CardContent>
         </Card>
 
@@ -592,9 +558,7 @@ export function SentinelResponseCentre({
             <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               In progress
             </p>
-            <p className="mt-2 text-2xl font-semibold tabular-nums">
-              {responseCounts.in_progress}
-            </p>
+            <p className="mt-2 text-2xl font-semibold tabular-nums">{responseCounts.in_progress}</p>
           </CardContent>
         </Card>
 
@@ -630,14 +594,11 @@ export function SentinelResponseCentre({
                 Persistent response register
               </CardTitle>
               <CardDescription className="mt-1">
-                Create and manage operational responses linked to detected
-                Sentinel risks.
+                Create and manage operational responses linked to detected Sentinel risks.
               </CardDescription>
             </div>
 
-            <Badge variant="outline">
-              {responses.data?.length ?? 0} saved responses
-            </Badge>
+            <Badge variant="outline">{responses.data?.length ?? 0} saved responses</Badge>
           </div>
         </CardHeader>
 
@@ -655,10 +616,7 @@ export function SentinelResponseCentre({
               const response = responseByRisk.get(risk.id);
 
               return (
-                <div
-                  key={risk.id}
-                  className="space-y-3 rounded-xl border border-border/70 p-4"
-                >
+                <div key={risk.id} className="space-y-3 rounded-xl border border-border/70 p-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-xs font-semibold tabular-nums text-muted-foreground">
                       {String(index + 1).padStart(2, "0")}
@@ -720,9 +678,9 @@ export function SentinelResponseCentre({
 
       <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-400/5 p-4 text-xs leading-relaxed text-muted-foreground">
         <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-        Response records are subject to REEF database permissions. A failed
-        save may indicate that the current user does not have permission to
-        create or update a response for the selected plant.
+        Response records are subject to REEF database permissions. A failed save may indicate that
+        the current user does not have permission to create or update a response for the selected
+        plant.
       </div>
     </div>
   );

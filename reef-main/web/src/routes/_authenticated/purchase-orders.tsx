@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useList, ZAR, NUM } from "@/lib/reef-db";
+import type { TablesUpdate } from "@/integrations/supabase/types";
+import { useList, ZAR, NUM, poRef, type Row } from "@/lib/reef-db";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable } from "@/components/DataTable";
 import { Button } from "@/components/ui/button";
@@ -14,15 +15,16 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/_authenticated/purchase-orders")({ component: Page });
 
 function Page() {
-  const list = useList<any>("purchase_orders", "created_at");
-  const suppliers = useList<any>("suppliers", "name", true);
+  const list = useList<Row<"purchase_orders">>("purchase_orders", "created_at");
+  const suppliers = useList<Row<"suppliers">>("suppliers", "name", true);
   const qc = useQueryClient();
-  const [openPO, setOpenPO] = useState<any>(null);
+  const [openPO, setOpenPO] = useState<Row<"purchase_orders"> | null>(null);
 
   const lines = useQuery({
     queryKey: ["po_lines", openPO?.id],
     enabled: !!openPO,
     queryFn: async () => {
+      if (!openPO) return [];
       const { data, error } = await supabase
         .from("po_lines")
         .select("*, stock_items(name, unit)")
@@ -33,8 +35,14 @@ function Page() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const patch: any = { status };
+    mutationFn: async ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: Row<"purchase_orders">["status"];
+    }) => {
+      const patch: TablesUpdate<"purchase_orders"> = { status };
       if (status === "approved") patch.approved_at = new Date().toISOString();
       if (status === "received") patch.received_at = new Date().toISOString();
       const { error } = await supabase.from("purchase_orders").update(patch).eq("id", id);
@@ -46,7 +54,7 @@ function Page() {
       toast.success(v.status === "received" ? "Received — stock updated" : `Marked ${v.status}`);
       setOpenPO(null);
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const statusColor = (s: string) =>
@@ -67,27 +75,32 @@ function Page() {
       <DataTable
         rows={list.data ?? []}
         columns={[
-          { key: "po_number", label: "PO #" },
+          {
+            key: "po_number",
+            label: "PO #",
+            render: (r) => poRef(r.id),
+            value: (r) => poRef(r.id),
+          },
           {
             key: "supplier",
             label: "Supplier",
-            render: (r: any) => suppliers.data?.find((s) => s.id === r.supplier_id)?.name ?? "—",
+            render: (r) => suppliers.data?.find((s) => s.id === r.supplier_id)?.name ?? "—",
           },
           {
             key: "created_at",
             label: "Created",
-            render: (r: any) => new Date(r.created_at).toLocaleDateString(),
+            render: (r) => new Date(r.created_at).toLocaleDateString(),
           },
-          { key: "total", label: "Total", render: (r: any) => ZAR(r.total_cost) },
+          { key: "total", label: "Total", render: (r) => ZAR(r.total_cost) },
           {
             key: "status",
             label: "Status",
-            render: (r: any) => <Badge variant={statusColor(r.status) as any}>{r.status}</Badge>,
+            render: (r) => <Badge variant={statusColor(r.status)}>{r.status}</Badge>,
           },
           {
             key: "actions",
             label: "",
-            render: (r: any) => (
+            render: (r) => (
               <Button size="sm" variant="ghost" onClick={() => setOpenPO(r)}>
                 View
               </Button>
@@ -99,7 +112,7 @@ function Page() {
       <Dialog open={!!openPO} onOpenChange={(o) => !o && setOpenPO(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{openPO?.po_number}</DialogTitle>
+            <DialogTitle>{openPO ? `Purchase order ${poRef(openPO.id)}` : null}</DialogTitle>
           </DialogHeader>
           {openPO && (
             <div className="space-y-4">
@@ -114,7 +127,7 @@ function Page() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Status:</span>{" "}
-                  <Badge variant={statusColor(openPO.status) as any}>{openPO.status}</Badge>
+                  <Badge variant={statusColor(openPO.status)}>{openPO.status}</Badge>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Created:</span>{" "}
@@ -132,14 +145,16 @@ function Page() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(lines.data ?? []).map((l: any) => (
+                    {(lines.data ?? []).map((l) => (
                       <tr key={l.id} className="border-t">
                         <td className="p-2">{l.stock_items?.name ?? "—"}</td>
                         <td className="p-2 text-right">
                           {NUM(l.qty)} {l.stock_items?.unit}
                         </td>
                         <td className="p-2 text-right">{ZAR(l.unit_cost)}</td>
-                        <td className="p-2 text-right">{ZAR(l.line_total)}</td>
+                        <td className="p-2 text-right">
+                          {ZAR(Number(l.qty) * Number(l.unit_cost))}
+                        </td>
                       </tr>
                     ))}
                     {(lines.data ?? []).length === 0 && (
