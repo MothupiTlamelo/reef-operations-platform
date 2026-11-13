@@ -2,7 +2,7 @@
 
 Generated from the route registry by `npm run endpoints` in `api/`. Do not edit by hand.
 
-71 endpoints, 71 explained.
+77 endpoints, 77 explained.
 
 | Method | Path | Who may call it | What it is for | What it refuses |
 |---|---|---|---|---|
@@ -65,6 +65,7 @@ Generated from the route registry by `npm run endpoints` in `api/`. Do not edit 
 | POST | `/api/v1/purchase-orders` | owner, manager | Raises a purchase order. Only owners and managers can call this. The plant is taken from the caller, except for an owner, who may raise one for any plant. | Missing or invalid fields, and any field it does not recognise. |
 | PATCH | `/api/v1/purchase-orders/:id` | owner, manager | Changes a purchase order's details or its status. Refuses a save from an out-of-date copy. | Invalid or unrecognised fields, a missing version, or a version older than the stored one. The last means someone else saved first: it answers 409 with their copy, so nobody overwrites a change they never saw. |
 | DELETE | `/api/v1/purchase-orders/:id` | owner, manager | Deletes a purchase order. Refuses if the caller cannot see it. | A record that does not exist, or one that other records still point to. |
+| GET | `/api/v1/sentinel/risks` | owner, manager, worker | Returns operational risks identified by REEF Sentinel, including equipment lifespan, overdue maintenance and critical or low stock. | Unauthenticated users and users without stock read permission. |
 | GET | `/api/v1/reports/runs` | owner, manager | The month-end reports that have been produced, newest first, each saying whether it is out of date: an entry dated in its month was added, changed or removed after it was made, so the figures in it are no longer the figures in the system. | Workers, who do not see reports. Also a site id that is not an id. A report of a month still running is never marked: it is expected to change. |
 | GET | `/api/v1/analytics/cost-per-ton` | owner, manager | Cost per ton for one site over a period, with fixed and variable costs kept apart so a rise can be attributed rather than only noticed. | A period without both dates, or one that runs backwards. A site the caller may not see answers 404 rather than 403, because 403 would confirm it exists. A period with no production returns null rather than 0: a site that produced nothing is not the cheapest site. |
 | GET | `/api/v1/analytics/comparison` | owner | Every site the caller may see, ranked by cost per ton, cheapest first. The owner's view of which plant is running expensively. | A manager, who sees their own sites' figures but not the ranking: that would tell them how another manager's site is doing. Sites with no production sort last, not first, because they have no cost per ton at all. |
@@ -77,3 +78,8 @@ Generated from the route registry by `npm run endpoints` in `api/`. Do not edit 
 | PATCH | `/api/v1/notifications/:id/read` | owner, manager, worker | Marks one of your own notifications as read. | A notification belonging to somebody else, and one already read, both as 404. Marking a notification read is not a change anybody needs to be warned about, so this one carries no version check. |
 | GET | `/api/v1/settings` | owner, manager, worker | Lists the platform settings with their current values. Every role reads them, because the capture forms need the age limit. | A caller with no role. |
 | PATCH | `/api/v1/settings/:key` | owner | Changes one setting. Owner only, because a setting such as the capture age limit changes what every plant may record. | An unknown setting, or a value outside what that setting allows (the age limit is 1 to 365 whole days). |
+| GET | `/api/v1/worker-purchases` | Any signed-in user | Lists worker purchase claims the caller can see. A worker sees their own, a manager sees their plant, an owner sees everything. Filter by status, worker, mine, or month. | An unknown sort column, an unknown status filter, or a page size above 200. |
+| GET | `/api/v1/worker-purchases/summary` | Any signed-in user | Totals the caller can see: outstanding pending claims and claims paid this month. For the dashboard tile. | Nobody signed in. |
+| POST | `/api/v1/worker-purchases` | Any signed-in user | Records a purchase a worker paid for out of pocket. A worker submits for themselves; a supervisor may submit on someone else's behalf. Amount must be positive and the date cannot be in the future. | A missing worker, description, category or amount; a zero or negative amount; a date in the future; a worker id that is not a UUID. |
+| PATCH | `/api/v1/worker-purchases/:id/status` | owner, manager | Marks one claim paid, or voids it with a reason. The owner's action at month end. Paid sets paid_on and paid_by; voided requires a reason. | A claim that does not exist; a status other than paid or voided; a void with no reason; a caller who is not an owner. |
+| POST | `/api/v1/worker-purchases/mark-paid` | owner, manager | Marks a batch of claims paid in one call. The confirmation dialog uses this so a month-end payout is one transaction, not ten. | An empty list; any id in the list that does not exist or is not a pending claim; a caller who is not an owner. |

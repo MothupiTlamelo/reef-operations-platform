@@ -145,7 +145,7 @@ export function buildFallbackAnswer(toolCalls: ToolCallRecord[]): string {
     return [
       "I drafted an answer, but I didn't fetch any figures from the database first, so I can't stand behind anything I would have said.",
       "",
-      "Ask me the question again, phrased as a direct request for the data (for example, \"what items do we have in stock?\"), and I'll fetch the figures properly before answering.",
+      'Ask me the question again, phrased as a direct request for the data (for example, "what items do we have in stock?"), and I\'ll fetch the figures properly before answering.',
     ].join("\n");
   }
 

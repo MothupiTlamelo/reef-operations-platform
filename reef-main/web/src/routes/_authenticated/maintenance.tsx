@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCaptureLimit } from "@/hooks/useCaptureLimit";
 import { useOneAtATime } from "@/hooks/useOneAtATime";
-import { useList, useRemove, ZAR, NUM } from "@/lib/reef-db";
+import { useList, useRemove, ZAR, NUM, type Row } from "@/lib/reef-db";
 import { STOCK_KEY, useStockOnHand } from "@/hooks/useStock";
 import { api } from "@/lib/api";
 import { PageHeader } from "@/components/PageHeader";
@@ -12,7 +12,13 @@ import { Input } from "@/components/ui/input";
 import { NumberField } from "@/components/NumberField";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { Plus, Trash2 } from "lucide-react";
@@ -24,8 +30,8 @@ type PartRow = { stock_item_id: string; qty: number };
 
 function Page() {
   const limit = useCaptureLimit();
-  const list = useList<any>("maintenance_logs", "date");
-  const equipment = useList<any>("equipment", "name", true);
+  const list = useList<Row<"maintenance_logs">>("maintenance_logs", "date");
+  const equipment = useList<Row<"equipment">>("equipment", "name", true);
   const stock = useStockOnHand();
   const qc = useQueryClient();
   const remove = useRemove("maintenance_logs");
@@ -34,11 +40,15 @@ function Page() {
   const [equipId, setEquipId] = useState("");
   const [parts, setParts] = useState<PartRow[]>([]);
 
-  const openNew = () => { setEquipId(""); setParts([]); setOpen(true); };
+  const openNew = () => {
+    setEquipId("");
+    setParts([]);
+    setOpen(true);
+  };
 
   const saveLog = useMutation({
     // The repair and its parts go in one request and are saved together, or not at all.
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: Record<string, unknown>) => {
       const cleanParts = parts.filter((p) => p.stock_item_id && p.qty > 0);
       const res = await api("/api/v1/maintenance-logs", {
         method: "POST",
@@ -53,7 +63,7 @@ function Page() {
       toast.success("Repair logged. Stock updated and POs drafted where needed.");
       setOpen(false);
     },
-    onError: (e: any) => toast.error(e.message ?? "Save failed"),
+    onError: (e: Error) => toast.error(e.message ?? "Save failed"),
   });
 
   const once = useOneAtATime();
@@ -62,87 +72,186 @@ function Page() {
     const f = new FormData(e.currentTarget);
     if (!equipId) return toast.error("Select equipment");
     // A double tap must not log the repair twice: the second submit is ignored while the first is in flight.
-    await once(() => saveLog.mutateAsync({
-      equipment_id: equipId,
-      date: f.get("date"),
-      description: f.get("description"),
-      labour_hours: Number(f.get("labour_hours") || 0),
-      labour_cost: Number(f.get("labour_cost") || 0),
-      downtime_hours: Number(f.get("downtime_hours") || 0),
-      next_due_date: f.get("next_due_date") || null,
-      next_due_tons: Number(f.get("next_due_tons") || 0) || null,
-      performed_by: f.get("performed_by") || null,
-    })).catch(() => {});
+    await once(() =>
+      saveLog.mutateAsync({
+        equipment_id: equipId,
+        date: f.get("date"),
+        description: f.get("description"),
+        labour_hours: Number(f.get("labour_hours") || 0),
+        labour_cost: Number(f.get("labour_cost") || 0),
+        downtime_hours: Number(f.get("downtime_hours") || 0),
+        next_due_date: f.get("next_due_date") || null,
+        next_due_tons: Number(f.get("next_due_tons") || 0) || null,
+        performed_by: f.get("performed_by") || null,
+      }),
+    ).catch(() => {});
   };
 
   return (
     <div>
-      <PageHeader title="Maintenance & Repairs" description="Log repairs, consume parts (stock decrements automatically), schedule next service." actions={
-        <Button onClick={openNew}><Plus className="w-4 h-4 mr-1" />Log repair</Button>
-      } />
+      <PageHeader
+        title="Maintenance & Repairs"
+        description="Log repairs, consume parts (stock decrements automatically), schedule next service."
+        actions={
+          <Button onClick={openNew}>
+            <Plus className="w-4 h-4 mr-1" />
+            Log repair
+          </Button>
+        }
+      />
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>New repair log</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>New repair log</DialogTitle>
+          </DialogHeader>
           <form onSubmit={onSubmit} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Equipment">
                 <Select value={equipId} onValueChange={setEquipId}>
-                  <SelectTrigger><SelectValue placeholder="Select equipment" /></SelectTrigger>
-                  <SelectContent>{equipment.data?.map((e) => <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>)}</SelectContent>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select equipment" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {equipment.data?.map((e) => (
+                      <SelectItem key={e.id} value={e.id}>
+                        {e.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </Field>
-              <Field label="Date"><Input name="date" type="date" required min={limit.earliest} max={limit.today} defaultValue={limit.today} /><p className="text-xs text-muted-foreground mt-1">Entries older than {limit.days} days can't be captured.</p></Field>
+              <Field label="Date">
+                <Input
+                  name="date"
+                  type="date"
+                  required
+                  min={limit.earliest}
+                  max={limit.today}
+                  defaultValue={limit.today}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Entries older than {limit.days} days can't be captured.
+                </p>
+              </Field>
             </div>
-            <Field label="Description"><Input name="description" required placeholder="What was repaired" /></Field>
+            <Field label="Description">
+              <Input name="description" required placeholder="What was repaired" />
+            </Field>
             <div className="grid grid-cols-3 gap-3">
-              <Field label="Labour hours"><Input name="labour_hours" type="number" step="0.01" min="0" placeholder="0" /></Field>
-              <Field label="Labour cost (ZAR)"><Input name="labour_cost" type="number" step="0.01" min="0" placeholder="0" /></Field>
-              <Field label="Downtime (hours)"><Input name="downtime_hours" type="number" step="0.01" min="0" placeholder="0" /></Field>
+              <Field label="Labour hours">
+                <Input name="labour_hours" type="number" step="0.01" min="0" placeholder="0" />
+              </Field>
+              <Field label="Labour cost (ZAR)">
+                <Input name="labour_cost" type="number" step="0.01" min="0" placeholder="0" />
+              </Field>
+              <Field label="Downtime (hours)">
+                <Input name="downtime_hours" type="number" step="0.01" min="0" placeholder="0" />
+              </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Next service due (date)"><Input name="next_due_date" type="date" /></Field>
-              <Field label="Next service due (tons)"><Input name="next_due_tons" type="number" step="0.01" /></Field>
+              <Field label="Next service due (date)">
+                <Input name="next_due_date" type="date" />
+              </Field>
+              <Field label="Next service due (tons)">
+                <Input name="next_due_tons" type="number" step="0.01" />
+              </Field>
             </div>
 
             <div className="border-t pt-3">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium">Parts consumed</label>
-                <Button type="button" size="sm" variant="outline" onClick={() => setParts([...parts, { stock_item_id: "", qty: 1 }])}>
-                  <Plus className="w-3 h-3 mr-1" />Add part
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setParts([...parts, { stock_item_id: "", qty: 1 }])}
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Add part
                 </Button>
               </div>
-              {parts.length === 0 && <p className="text-xs text-muted-foreground">No parts. Add to consume from inventory.</p>}
+              {parts.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No parts. Add to consume from inventory.
+                </p>
+              )}
               {parts.map((p, i) => (
                 <div key={i} className="flex gap-2 mb-2">
-                  <Select value={p.stock_item_id} onValueChange={(v) => { const n = [...parts]; n[i].stock_item_id = v; setParts(n); }}>
-                    <SelectTrigger className="flex-1"><SelectValue placeholder="Select part" /></SelectTrigger>
-                    <SelectContent>{stock.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name} ({NUM(s.qty_on_hand)} on hand)</SelectItem>)}</SelectContent>
+                  <Select
+                    value={p.stock_item_id}
+                    onValueChange={(v) => {
+                      const n = [...parts];
+                      n[i].stock_item_id = v;
+                      setParts(n);
+                    }}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select part" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stock.data?.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.name} ({NUM(s.qty_on_hand)} on hand)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
                   </Select>
-                  <NumberField step="0.01" className="w-24 shrink-0" value={p.qty}
-                    onValueChange={(v) => { const n = [...parts]; n[i].qty = v; setParts(n); }} />
-                  <Button type="button" size="icon" variant="ghost" onClick={() => setParts(parts.filter((_, j) => j !== i))}>
+                  <NumberField
+                    step="0.01"
+                    className="w-24 shrink-0"
+                    value={p.qty}
+                    onValueChange={(v) => {
+                      const n = [...parts];
+                      n[i].qty = v;
+                      setParts(n);
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setParts(parts.filter((_, j) => j !== i))}
+                  >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
               ))}
             </div>
 
-            <Field label="Performed by"><Input name="performed_by" placeholder="Name of the fitter or contractor" /></Field>
-            <Button type="submit" className="w-full" disabled={saveLog.isPending}>{saveLog.isPending ? "Saving…" : "Save repair"}</Button>
+            <Field label="Performed by">
+              <Input name="performed_by" placeholder="Name of the fitter or contractor" />
+            </Field>
+            <Button type="submit" className="w-full" disabled={saveLog.isPending}>
+              {saveLog.isPending ? "Saving…" : "Save repair"}
+            </Button>
           </form>
         </DialogContent>
       </Dialog>
-      <DataTable rows={list.data ?? []} columns={[
-        { key: "date", label: "Date" },
-        { key: "equipment", label: "Equipment", render: (r: any) => equipment.data?.find((e) => e.id === r.equipment_id)?.name ?? "—" },
-        { key: "description", label: "Description" },
-        { key: "total_cost", label: "Total cost", render: (r: any) => ZAR(r.total_cost) },
-        { key: "next", label: "Next due", render: (r: any) => {
-          if (!r.next_due_date) return "—";
-          const overdue = new Date(r.next_due_date) < new Date();
-          return <Badge variant={overdue ? "destructive" : "secondary"}>{r.next_due_date}</Badge>;
-        } },
-      ]} onDelete={(r) => remove.mutate(r.id)} />
+      <DataTable
+        rows={list.data ?? []}
+        columns={[
+          { key: "date", label: "Date" },
+          {
+            key: "equipment",
+            label: "Equipment",
+            render: (r) => equipment.data?.find((e) => e.id === r.equipment_id)?.name ?? "—",
+          },
+          { key: "description", label: "Description" },
+          { key: "total_cost", label: "Total cost", render: (r) => ZAR(r.total_cost) },
+          {
+            key: "next",
+            label: "Next due",
+            render: (r) => {
+              if (!r.next_due_date) return "—";
+              const overdue = new Date(r.next_due_date) < new Date();
+              return (
+                <Badge variant={overdue ? "destructive" : "secondary"}>{r.next_due_date}</Badge>
+              );
+            },
+          },
+        ]}
+        onDelete={(r) => remove.mutate(r.id)}
+      />
     </div>
   );
 }

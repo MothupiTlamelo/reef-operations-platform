@@ -2,9 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { api } from "@/lib/api";
 import { reefToday } from "@reef/shared";
-import { useList } from "@/lib/reef-db";
+import { useList, type Row } from "@/lib/reef-db";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { NumberField } from "@/components/NumberField";
 import { Label } from "@/components/ui/label";
@@ -15,7 +21,7 @@ import { toast } from "sonner";
 export const Route = createFileRoute("/worker/log-production")({ component: Page });
 
 function Page() {
-  const mines = useList<any>("mines", "name", true);
+  const mines = useList<Row<"mines">>("mines", "name", true);
   const [mineId, setMineId] = useState("");
   const [tons, setTons] = useState<number>(0);
   const navigate = useNavigate();
@@ -36,7 +42,7 @@ function Page() {
       toast.success("Production logged");
       navigate({ to: "/worker" });
     },
-    onError: (e: any) => toast.error(e.message ?? "Failed"),
+    onError: (e: Error) => toast.error(e.message ?? "Failed"),
   });
 
   return (
@@ -45,15 +51,33 @@ function Page() {
       <div className="space-y-2">
         <Label htmlFor="log-production-mine">Mine</Label>
         <Select value={mineId} onValueChange={setMineId}>
-          <SelectTrigger id="log-production-mine" className="h-12 text-base"><SelectValue placeholder="Select mine" /></SelectTrigger>
-          <SelectContent>{mines.data?.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}</SelectContent>
+          <SelectTrigger id="log-production-mine" className="h-12 text-base">
+            <SelectValue placeholder="Select mine" />
+          </SelectTrigger>
+          <SelectContent>
+            {mines.data?.map((m) => (
+              <SelectItem key={m.id} value={m.id}>
+                {m.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
       </div>
       <div className="space-y-2">
         <Label htmlFor="log-production-tons-produced">Tons produced</Label>
-        <NumberField id="log-production-tons-produced" step="0.01" className="h-12 text-lg" value={tons} onValueChange={setTons} />
+        <NumberField
+          id="log-production-tons-produced"
+          step="0.01"
+          className="h-12 text-lg"
+          value={tons}
+          onValueChange={setTons}
+        />
       </div>
-      <Button className="w-full h-14 text-base" onClick={() => once(() => submit.mutateAsync()).catch(() => {})} disabled={submit.isPending}>
+      <Button
+        className="w-full h-14 text-base"
+        onClick={() => once(() => submit.mutateAsync()).catch(() => {})}
+        disabled={submit.isPending}
+      >
         {submit.isPending ? "Saving…" : "Save Production"}
       </Button>
     </div>

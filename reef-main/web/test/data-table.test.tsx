@@ -18,20 +18,37 @@ const ROWS: Row[] = Array.from({ length: 60 }, (_, i) => ({
 
 const COLUMNS: Column<Row>[] = [
   { key: "date", label: "Date", sortable: true },
-  { key: "mine", label: "Mine", sortable: true, value: (r) => MINES[r.mine_id], render: (r) => MINES[r.mine_id] },
+  {
+    key: "mine",
+    label: "Mine",
+    sortable: true,
+    value: (r) => MINES[r.mine_id],
+    render: (r) => MINES[r.mine_id],
+  },
   { key: "tons_produced", label: "Tons", sortable: true, value: (r) => r.tons_produced },
 ];
 
 function setup(props: Partial<Parameters<typeof DataTable<Row>>[0]> = {}) {
   const user = userEvent.setup();
-  render(<DataTable rows={ROWS} columns={COLUMNS} searchable searchLabel="Search production" pageSize={25} {...props} />);
+  render(
+    <DataTable
+      rows={ROWS}
+      columns={COLUMNS}
+      searchable
+      searchLabel="Search production"
+      pageSize={25}
+      {...props}
+    />,
+  );
   return { user };
 }
 
 /** The visible rows' cells for one column, in order. */
 function column(index: number) {
   const body = screen.getAllByRole("rowgroup")[1];
-  return within(body).getAllByRole("row").map((r) => within(r).getAllByRole("cell")[index].textContent);
+  return within(body)
+    .getAllByRole("row")
+    .map((r) => within(r).getAllByRole("cell")[index].textContent);
 }
 
 afterEach(() => cleanup());
@@ -42,7 +59,9 @@ describe("T18: the production table pages", () => {
     expect(column(0)).toHaveLength(25);
     expect(screen.getByText("Showing 1–25 of 60")).toBeTruthy();
     expect(screen.getByText("Page 1 of 3")).toBeTruthy();
-    expect((screen.getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Previous" }) as HTMLButtonElement).disabled).toBe(
+      true,
+    );
   });
 
   it("moves forward and back, and the last page holds the remainder", async () => {
@@ -72,7 +91,8 @@ describe("T18: the production table sorts", () => {
 
   it("puts a blank value last whichever way the column is sorted", async () => {
     const { user } = setup({ pageSize: 100 });
-    const sortTons = () => user.click(within(screen.getByRole("columnheader", { name: /Tons/ })).getByRole("button"));
+    const sortTons = () =>
+      user.click(within(screen.getByRole("columnheader", { name: /Tons/ })).getByRole("button"));
     await sortTons();
     expect(column(2).at(-1)).toBe("—");
     await sortTons();
@@ -81,7 +101,9 @@ describe("T18: the production table sorts", () => {
 
   it("sorts by what the cell shows (the site's name), not the hidden id", async () => {
     const { user } = setup({ pageSize: 100 });
-    await user.click(within(screen.getByRole("columnheader", { name: /Mine/ })).getByRole("button"));
+    await user.click(
+      within(screen.getByRole("columnheader", { name: /Mine/ })).getByRole("button"),
+    );
     const mines = column(1);
     expect(mines[0]).toBe("Kriel");
     expect(mines.at(-1)).toBe("Witbank");
@@ -91,7 +113,9 @@ describe("T18: the production table sorts", () => {
   it("goes back to the first page when the sort changes", async () => {
     const { user } = setup();
     await user.click(screen.getByRole("button", { name: "Next" }));
-    await user.click(within(screen.getByRole("columnheader", { name: /Date/ })).getByRole("button"));
+    await user.click(
+      within(screen.getByRole("columnheader", { name: /Date/ })).getByRole("button"),
+    );
     expect(screen.getByText("Page 1 of 3")).toBeTruthy();
   });
 });
@@ -109,7 +133,9 @@ describe("T18: the production table filters", () => {
     await user.click(screen.getByRole("button", { name: "Next" }));
     await user.type(screen.getByRole("searchbox"), "kriel");
     expect(screen.getByText("Page 1 of 1")).toBeTruthy();
-    await user.click(within(screen.getByRole("columnheader", { name: /Tons/ })).getByRole("button"));
+    await user.click(
+      within(screen.getByRole("columnheader", { name: /Tons/ })).getByRole("button"),
+    );
     expect(column(2).slice(0, 2)).toEqual(["10", "40"]);
   });
 

@@ -46,7 +46,8 @@ function AuthedLayout() {
             </div>
             <div className="text-sm hidden md:block">{user.email}</div>
             <Button variant="ghost" size="sm" onClick={signOut}>
-              <LogOut className="w-4 h-4 mr-1" />Sign out
+              <LogOut className="w-4 h-4 mr-1" />
+              Sign out
             </Button>
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-x-auto">

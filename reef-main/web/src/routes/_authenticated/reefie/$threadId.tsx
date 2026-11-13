@@ -9,9 +9,16 @@ export const Route = createFileRoute("/_authenticated/reefie/$threadId")({
   head: () => ({
     meta: [
       { title: "Reefie — R.E.E.F Operations Assistant" },
-      { name: "description", content: "Ask Reefie about live stock, maintenance, production and cost data across REEF mining sites." },
+      {
+        name: "description",
+        content:
+          "Ask Reefie about live stock, maintenance, production and cost data across REEF mining sites.",
+      },
       { property: "og:title", content: "Reefie — R.E.E.F Operations Assistant" },
-      { property: "og:description", content: "Live mining operations answers, advice and monthly report drafting." },
+      {
+        property: "og:description",
+        content: "Live mining operations answers, advice and monthly report drafting.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],

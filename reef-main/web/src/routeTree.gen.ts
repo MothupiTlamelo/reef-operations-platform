@@ -26,6 +26,8 @@ import { Route as AuthenticatedMinesRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedProductionRouteImport } from './routes/_authenticated/production'
 import { Route as AuthenticatedPurchaseOrdersRouteImport } from './routes/_authenticated/purchase-orders'
 import { Route as AuthenticatedReefieRouteRouteImport } from './routes/_authenticated/reefie/route'
+import { Route as AuthenticatedReimbursementsRouteImport } from './routes/_authenticated/reimbursements'
+import { Route as AuthenticatedSentinelRouteImport } from './routes/_authenticated/sentinel'
 import { Route as AuthenticatedSessionsRouteImport } from './routes/_authenticated/sessions'
 import { Route as AuthenticatedStaticCostsRouteImport } from './routes/_authenticated/static-costs'
 import { Route as AuthenticatedSuppliersRouteImport } from './routes/_authenticated/suppliers'
@@ -34,6 +36,7 @@ import { Route as WorkerIndexRouteImport } from './routes/worker/index'
 import { Route as WorkerLogDowntimeRouteImport } from './routes/worker/log-downtime'
 import { Route as WorkerLogFuelRouteImport } from './routes/worker/log-fuel'
 import { Route as WorkerLogProductionRouteImport } from './routes/worker/log-production'
+import { Route as WorkerLogPurchaseRouteImport } from './routes/worker/log-purchase'
 import { Route as WorkerLogRepairRouteImport } from './routes/worker/log-repair'
 import { Route as WorkerLogUsageRouteImport } from './routes/worker/log-usage'
 import { Route as WorkerSessionsRouteImport } from './routes/worker/sessions'
@@ -129,6 +132,17 @@ const AuthenticatedReefieRouteRoute =
     path: '/reefie',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedReimbursementsRoute =
+  AuthenticatedReimbursementsRouteImport.update({
+    id: '/reimbursements',
+    path: '/reimbursements',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedSentinelRoute = AuthenticatedSentinelRouteImport.update({
+  id: '/sentinel',
+  path: '/sentinel',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedSessionsRoute = AuthenticatedSessionsRouteImport.update({
   id: '/sessions',
   path: '/sessions',
@@ -168,6 +182,11 @@ const WorkerLogFuelRoute = WorkerLogFuelRouteImport.update({
 const WorkerLogProductionRoute = WorkerLogProductionRouteImport.update({
   id: '/log-production',
   path: '/log-production',
+  getParentRoute: () => WorkerRouteRoute,
+} as any)
+const WorkerLogPurchaseRoute = WorkerLogPurchaseRouteImport.update({
+  id: '/log-purchase',
+  path: '/log-purchase',
   getParentRoute: () => WorkerRouteRoute,
 } as any)
 const WorkerLogRepairRoute = WorkerLogRepairRouteImport.update({
@@ -227,6 +246,8 @@ export interface FileRoutesByFullPath {
   '/mines': typeof AuthenticatedMinesRoute
   '/production': typeof AuthenticatedProductionRoute
   '/purchase-orders': typeof AuthenticatedPurchaseOrdersRoute
+  '/reimbursements': typeof AuthenticatedReimbursementsRoute
+  '/sentinel': typeof AuthenticatedSentinelRoute
   '/sessions': typeof AuthenticatedSessionsRoute
   '/static-costs': typeof AuthenticatedStaticCostsRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
@@ -234,6 +255,7 @@ export interface FileRoutesByFullPath {
   '/worker/log-downtime': typeof WorkerLogDowntimeRoute
   '/worker/log-fuel': typeof WorkerLogFuelRoute
   '/worker/log-production': typeof WorkerLogProductionRoute
+  '/worker/log-purchase': typeof WorkerLogPurchaseRoute
   '/worker/log-repair': typeof WorkerLogRepairRoute
   '/worker/log-usage': typeof WorkerLogUsageRoute
   '/worker/sessions': typeof WorkerSessionsRoute
@@ -258,6 +280,8 @@ export interface FileRoutesByTo {
   '/mines': typeof AuthenticatedMinesRoute
   '/production': typeof AuthenticatedProductionRoute
   '/purchase-orders': typeof AuthenticatedPurchaseOrdersRoute
+  '/reimbursements': typeof AuthenticatedReimbursementsRoute
+  '/sentinel': typeof AuthenticatedSentinelRoute
   '/sessions': typeof AuthenticatedSessionsRoute
   '/static-costs': typeof AuthenticatedStaticCostsRoute
   '/suppliers': typeof AuthenticatedSuppliersRoute
@@ -265,6 +289,7 @@ export interface FileRoutesByTo {
   '/worker/log-downtime': typeof WorkerLogDowntimeRoute
   '/worker/log-fuel': typeof WorkerLogFuelRoute
   '/worker/log-production': typeof WorkerLogProductionRoute
+  '/worker/log-purchase': typeof WorkerLogPurchaseRoute
   '/worker/log-repair': typeof WorkerLogRepairRoute
   '/worker/log-usage': typeof WorkerLogUsageRoute
   '/worker/sessions': typeof WorkerSessionsRoute
@@ -293,6 +318,8 @@ export interface FileRoutesById {
   '/_authenticated/mines': typeof AuthenticatedMinesRoute
   '/_authenticated/production': typeof AuthenticatedProductionRoute
   '/_authenticated/purchase-orders': typeof AuthenticatedPurchaseOrdersRoute
+  '/_authenticated/reimbursements': typeof AuthenticatedReimbursementsRoute
+  '/_authenticated/sentinel': typeof AuthenticatedSentinelRoute
   '/_authenticated/sessions': typeof AuthenticatedSessionsRoute
   '/_authenticated/static-costs': typeof AuthenticatedStaticCostsRoute
   '/_authenticated/suppliers': typeof AuthenticatedSuppliersRoute
@@ -300,6 +327,7 @@ export interface FileRoutesById {
   '/worker/log-downtime': typeof WorkerLogDowntimeRoute
   '/worker/log-fuel': typeof WorkerLogFuelRoute
   '/worker/log-production': typeof WorkerLogProductionRoute
+  '/worker/log-purchase': typeof WorkerLogPurchaseRoute
   '/worker/log-repair': typeof WorkerLogRepairRoute
   '/worker/log-usage': typeof WorkerLogUsageRoute
   '/worker/sessions': typeof WorkerSessionsRoute
@@ -328,6 +356,8 @@ export interface FileRouteTypes {
     | '/mines'
     | '/production'
     | '/purchase-orders'
+    | '/reimbursements'
+    | '/sentinel'
     | '/sessions'
     | '/static-costs'
     | '/suppliers'
@@ -335,6 +365,7 @@ export interface FileRouteTypes {
     | '/worker/log-downtime'
     | '/worker/log-fuel'
     | '/worker/log-production'
+    | '/worker/log-purchase'
     | '/worker/log-repair'
     | '/worker/log-usage'
     | '/worker/sessions'
@@ -359,6 +390,8 @@ export interface FileRouteTypes {
     | '/mines'
     | '/production'
     | '/purchase-orders'
+    | '/reimbursements'
+    | '/sentinel'
     | '/sessions'
     | '/static-costs'
     | '/suppliers'
@@ -366,6 +399,7 @@ export interface FileRouteTypes {
     | '/worker/log-downtime'
     | '/worker/log-fuel'
     | '/worker/log-production'
+    | '/worker/log-purchase'
     | '/worker/log-repair'
     | '/worker/log-usage'
     | '/worker/sessions'
@@ -393,6 +427,8 @@ export interface FileRouteTypes {
     | '/_authenticated/mines'
     | '/_authenticated/production'
     | '/_authenticated/purchase-orders'
+    | '/_authenticated/reimbursements'
+    | '/_authenticated/sentinel'
     | '/_authenticated/sessions'
     | '/_authenticated/static-costs'
     | '/_authenticated/suppliers'
@@ -400,6 +436,7 @@ export interface FileRouteTypes {
     | '/worker/log-downtime'
     | '/worker/log-fuel'
     | '/worker/log-production'
+    | '/worker/log-purchase'
     | '/worker/log-repair'
     | '/worker/log-usage'
     | '/worker/sessions'
@@ -539,6 +576,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReefieRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/reimbursements': {
+      id: '/_authenticated/reimbursements'
+      path: '/reimbursements'
+      fullPath: '/reimbursements'
+      preLoaderRoute: typeof AuthenticatedReimbursementsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/sentinel': {
+      id: '/_authenticated/sentinel'
+      path: '/sentinel'
+      fullPath: '/sentinel'
+      preLoaderRoute: typeof AuthenticatedSentinelRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/sessions': {
       id: '/_authenticated/sessions'
       path: '/sessions'
@@ -593,6 +644,13 @@ declare module '@tanstack/react-router' {
       path: '/log-production'
       fullPath: '/worker/log-production'
       preLoaderRoute: typeof WorkerLogProductionRouteImport
+      parentRoute: typeof WorkerRouteRoute
+    }
+    '/worker/log-purchase': {
+      id: '/worker/log-purchase'
+      path: '/log-purchase'
+      fullPath: '/worker/log-purchase'
+      preLoaderRoute: typeof WorkerLogPurchaseRouteImport
       parentRoute: typeof WorkerRouteRoute
     }
     '/worker/log-repair': {
@@ -677,6 +735,8 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedMinesRoute: typeof AuthenticatedMinesRoute
   AuthenticatedProductionRoute: typeof AuthenticatedProductionRoute
   AuthenticatedPurchaseOrdersRoute: typeof AuthenticatedPurchaseOrdersRoute
+  AuthenticatedReimbursementsRoute: typeof AuthenticatedReimbursementsRoute
+  AuthenticatedSentinelRoute: typeof AuthenticatedSentinelRoute
   AuthenticatedSessionsRoute: typeof AuthenticatedSessionsRoute
   AuthenticatedStaticCostsRoute: typeof AuthenticatedStaticCostsRoute
   AuthenticatedSuppliersRoute: typeof AuthenticatedSuppliersRoute
@@ -698,6 +758,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedMinesRoute: AuthenticatedMinesRoute,
   AuthenticatedProductionRoute: AuthenticatedProductionRoute,
   AuthenticatedPurchaseOrdersRoute: AuthenticatedPurchaseOrdersRoute,
+  AuthenticatedReimbursementsRoute: AuthenticatedReimbursementsRoute,
+  AuthenticatedSentinelRoute: AuthenticatedSentinelRoute,
   AuthenticatedSessionsRoute: AuthenticatedSessionsRoute,
   AuthenticatedStaticCostsRoute: AuthenticatedStaticCostsRoute,
   AuthenticatedSuppliersRoute: AuthenticatedSuppliersRoute,
@@ -712,6 +774,7 @@ interface WorkerRouteRouteChildren {
   WorkerLogDowntimeRoute: typeof WorkerLogDowntimeRoute
   WorkerLogFuelRoute: typeof WorkerLogFuelRoute
   WorkerLogProductionRoute: typeof WorkerLogProductionRoute
+  WorkerLogPurchaseRoute: typeof WorkerLogPurchaseRoute
   WorkerLogRepairRoute: typeof WorkerLogRepairRoute
   WorkerLogUsageRoute: typeof WorkerLogUsageRoute
   WorkerSessionsRoute: typeof WorkerSessionsRoute
@@ -722,6 +785,7 @@ const WorkerRouteRouteChildren: WorkerRouteRouteChildren = {
   WorkerLogDowntimeRoute: WorkerLogDowntimeRoute,
   WorkerLogFuelRoute: WorkerLogFuelRoute,
   WorkerLogProductionRoute: WorkerLogProductionRoute,
+  WorkerLogPurchaseRoute: WorkerLogPurchaseRoute,
   WorkerLogRepairRoute: WorkerLogRepairRoute,
   WorkerLogUsageRoute: WorkerLogUsageRoute,
   WorkerSessionsRoute: WorkerSessionsRoute,

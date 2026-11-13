@@ -13,7 +13,8 @@ export function useCaptureLimit() {
     staleTime: 5 * 60_000,
   });
   const days = Number(
-    settings.data?.find((s) => s.key === "capture_max_age_days")?.value ?? DEFAULT_CAPTURE_MAX_AGE_DAYS,
+    settings.data?.find((s) => s.key === "capture_max_age_days")?.value ??
+      DEFAULT_CAPTURE_MAX_AGE_DAYS,
   );
   const today = reefToday();
   const earliest = new Date(`${today}T00:00:00Z`);

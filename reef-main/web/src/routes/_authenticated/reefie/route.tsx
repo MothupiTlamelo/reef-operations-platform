@@ -64,10 +64,19 @@ function Layout() {
       <aside className="lg:w-64 shrink-0">
         <div className="rounded-xl border border-border/70 bg-card/60 p-3">
           <div className="flex items-center gap-2 pb-3 border-b border-border/60">
-            <img src={reefieAvatar} alt="Reefie" width={512} height={512} loading="lazy" className="w-8 h-8" />
+            <img
+              src={reefieAvatar}
+              alt="Reefie"
+              width={512}
+              height={512}
+              loading="lazy"
+              className="w-8 h-8"
+            />
             <div>
               <div className="font-display text-base leading-none tracking-wide">REEFIE</div>
-              <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Ops assistant</div>
+              <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                Ops assistant
+              </div>
             </div>
           </div>
           <Button onClick={onNew} className="w-full mt-3" size="sm">
@@ -81,7 +90,9 @@ function Layout() {
                   <div
                     key={t.id}
                     className={`group flex items-center gap-1 rounded-md px-2 py-1.5 text-sm transition-colors ${
-                      active ? "bg-primary/10 text-foreground" : "hover:bg-muted/60 text-muted-foreground"
+                      active
+                        ? "bg-primary/10 text-foreground"
+                        : "hover:bg-muted/60 text-muted-foreground"
                     }`}
                   >
                     <Link

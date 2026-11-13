@@ -66,8 +66,8 @@ export function ConflictNotice<T extends Record<string, unknown>>({
         <Info className="h-4 w-4" />
         <AlertTitle>Their latest version is loaded</AlertTitle>
         <AlertDescription>
-          What you typed is still in the form. Fields you had not changed now show their values. Press Save to apply
-          your changes on top of theirs.
+          What you typed is still in the form. Fields you had not changed now show their values.
+          Press Save to apply your changes on top of theirs.
         </AlertDescription>
       </Alert>
     );
@@ -89,15 +89,23 @@ export function ConflictNotice<T extends Record<string, unknown>>({
             <caption className="sr-only">Their saved values compared with what you typed</caption>
             <thead>
               <tr className="text-left text-muted-foreground">
-                <th scope="col" className="py-1 pr-2 font-medium">Field</th>
-                <th scope="col" className="py-1 pr-2 font-medium">Their version</th>
-                <th scope="col" className="py-1 font-medium">What you typed</th>
+                <th scope="col" className="py-1 pr-2 font-medium">
+                  Field
+                </th>
+                <th scope="col" className="py-1 pr-2 font-medium">
+                  Their version
+                </th>
+                <th scope="col" className="py-1 font-medium">
+                  What you typed
+                </th>
               </tr>
             </thead>
             <tbody>
               {differences.map(([key, label]) => (
                 <tr key={key} className="border-t border-destructive/20">
-                  <th scope="row" className="py-1 pr-2 text-left font-medium">{label}</th>
+                  <th scope="row" className="py-1 pr-2 text-left font-medium">
+                    {label}
+                  </th>
                   <td className="py-1 pr-2">{format(key, conflict.current[key])}</td>
                   <td className="py-1">{format(key, conflict.typed[key])}</td>
                 </tr>
@@ -105,7 +113,12 @@ export function ConflictNotice<T extends Record<string, unknown>>({
             </tbody>
           </table>
         )}
-        <Button type="button" variant="outline" size="sm" onClick={() => onReload(conflict.current)}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onReload(conflict.current)}
+        >
           <RefreshCw className="mr-1 h-4 w-4" />
           Load their version and keep my typing
         </Button>

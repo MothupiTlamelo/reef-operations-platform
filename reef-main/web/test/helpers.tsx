@@ -34,12 +34,18 @@ export function installBrowserShims() {
 export async function renderScreen(Screen: ComponentType, url = "/") {
   const root = createRootRoute();
   const page = createRoute({ getParentRoute: () => root, path: "/", component: Screen });
-  const other = createRoute({ getParentRoute: () => root, path: "$", component: () => <p>Left the form</p> });
+  const other = createRoute({
+    getParentRoute: () => root,
+    path: "$",
+    component: () => <p>Left the form</p>,
+  });
   const router = createRouter({
     routeTree: root.addChildren([page, other]),
     history: createMemoryHistory({ initialEntries: [url] }),
   });
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
   const user = userEvent.setup();
   const view = render(
     <QueryClientProvider client={queryClient}>
@@ -51,7 +57,11 @@ export async function renderScreen(Screen: ComponentType, url = "/") {
 }
 
 /** Opens a dropdown and picks an option by its visible text, as a person would. */
-export async function pick(user: ReturnType<typeof userEvent.setup>, trigger: HTMLElement, option: string) {
+export async function pick(
+  user: ReturnType<typeof userEvent.setup>,
+  trigger: HTMLElement,
+  option: string,
+) {
   await user.click(trigger);
   await user.click(await screen.findByRole("option", { name: option }));
 }

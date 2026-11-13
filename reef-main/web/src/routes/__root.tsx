@@ -81,16 +81,36 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Reef Ops — Mining Operations Platform" },
-      { name: "description", content: "Reef Energy Engineering Fuels operations platform: maintenance, inventory, production and analytics for mining contracts." },
+      {
+        name: "description",
+        content:
+          "Reef Energy Engineering Fuels operations platform: maintenance, inventory, production and analytics for mining contracts.",
+      },
       { name: "author", content: "Reef Energy Engineering Fuels" },
       { property: "og:title", content: "Reef Ops — Mining Operations Platform" },
-      { property: "og:description", content: "Reef Energy Engineering Fuels operations platform: maintenance, inventory, production and analytics for mining contracts." },
+      {
+        property: "og:description",
+        content:
+          "Reef Energy Engineering Fuels operations platform: maintenance, inventory, production and analytics for mining contracts.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Reef Ops — Mining Operations Platform" },
-      { name: "twitter:description", content: "Reef Energy Engineering Fuels operations platform: maintenance, inventory, production and analytics for mining contracts." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/16702e70-145e-45d7-9818-3baa1d9628ab/id-preview-33feded5--6ea1d215-f2bc-4bd8-a7f6-f372964c22f5.lovable.app-1784887949479.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/16702e70-145e-45d7-9818-3baa1d9628ab/id-preview-33feded5--6ea1d215-f2bc-4bd8-a7f6-f372964c22f5.lovable.app-1784887949479.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Reef Energy Engineering Fuels operations platform: maintenance, inventory, production and analytics for mining contracts.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/16702e70-145e-45d7-9818-3baa1d9628ab/id-preview-33feded5--6ea1d215-f2bc-4bd8-a7f6-f372964c22f5.lovable.app-1784887949479.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/16702e70-145e-45d7-9818-3baa1d9628ab/id-preview-33feded5--6ea1d215-f2bc-4bd8-a7f6-f372964c22f5.lovable.app-1784887949479.png",
+      },
     ],
     links: [
       {

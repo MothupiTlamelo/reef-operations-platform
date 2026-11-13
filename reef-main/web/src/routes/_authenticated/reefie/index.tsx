@@ -24,7 +24,9 @@ function Page() {
       navigate({ to: "/reefie/$threadId", params: { threadId: id }, replace: true });
     };
     void go();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isLoading, threads, navigate, qc]);
 
   return <p className="text-sm text-muted-foreground p-6">Opening Reefie…</p>;

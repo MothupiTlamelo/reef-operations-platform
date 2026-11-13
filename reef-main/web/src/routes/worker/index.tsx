@@ -1,5 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Boxes, Wrench, AlertOctagon, Fuel, Droplets, Receipt, MonitorSmartphone } from "lucide-react";
+import {
+  Boxes,
+  Wrench,
+  AlertOctagon,
+  Fuel,
+  Droplets,
+  Receipt,
+  MonitorSmartphone,
+} from "lucide-react";
 
 export const Route = createFileRoute("/worker/")({
   component: WorkerHome,
@@ -54,9 +62,7 @@ function WorkerHome() {
               On-site · Live sync
             </div>
 
-            <h1 className="text-display text-2xl sm:text-3xl font-normal">
-              Log your shift.
-            </h1>
+            <h1 className="text-display text-2xl sm:text-3xl font-normal">Log your shift.</h1>
 
             <p className="text-sm text-muted-foreground mt-1">
               One tap. Data hits the office instantly.

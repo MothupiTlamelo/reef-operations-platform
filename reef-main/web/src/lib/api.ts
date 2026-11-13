@@ -19,7 +19,10 @@ export class ApiRequestError extends Error {
  * Calls the REEF API as the signed-in user. Sign-in itself still happens through Supabase Auth;
  * this attaches that session's access token, and the API decides what the user may do.
  */
-export async function api<T>(path: string, init: RequestInit = {}): Promise<{ data: T; meta?: ListMeta }> {
+export async function api<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<{ data: T; meta?: ListMeta }> {
   const { data: auth } = await supabase.auth.getSession();
   const token = auth.session?.access_token;
   const headers = new Headers(init.headers);
@@ -30,11 +33,16 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<{ da
   try {
     res = await fetch(`${BASE}${path}`, { ...init, headers });
   } catch {
-    throw new ApiRequestError("NETWORK", "Cannot reach the REEF server. Check your connection and try again", 0);
+    throw new ApiRequestError(
+      "NETWORK",
+      "Cannot reach the REEF server. Check your connection and try again",
+      0,
+    );
   }
 
   const body = (await res.json().catch(() => null)) as ApiResponse<T> | null;
-  if (!body) throw new ApiRequestError("INTERNAL", "The server sent an unreadable response", res.status);
+  if (!body)
+    throw new ApiRequestError("INTERNAL", "The server sent an unreadable response", res.status);
   if (isFailure(body)) {
     throw new ApiRequestError(body.error.code, body.error.message, res.status, body.error.details);
   }
@@ -81,7 +89,8 @@ export async function fetchMe(): Promise<Me | null> {
   const { data: auth } = await supabase.auth.getSession();
   const token = auth.session?.access_token;
   if (!token) return null;
-  if (meCache && meCache.token === token && Date.now() - meCache.at < ME_TTL_MS) return meCache.value;
+  if (meCache && meCache.token === token && Date.now() - meCache.at < ME_TTL_MS)
+    return meCache.value;
 
   const value = api<Me>("/api/v1/me").then(
     (res) => res.data,

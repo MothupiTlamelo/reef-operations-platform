@@ -8,7 +8,7 @@ import { useCallback, useRef } from "react";
  */
 export function useOneAtATime() {
   const busy = useRef(false);
-  return useCallback(async <T,>(work: () => Promise<T>): Promise<T | undefined> => {
+  return useCallback(async <T>(work: () => Promise<T>): Promise<T | undefined> => {
     if (busy.current) return undefined;
     busy.current = true;
     try {

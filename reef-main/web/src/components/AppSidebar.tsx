@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
+  ShieldCheck,
   Users,
   Mountain,
   Wrench,
@@ -33,12 +34,16 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-
 const items = [
   {
     title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Sentinel",
+    url: "/sentinel",
+    icon: ShieldCheck,
   },
   {
     title: "Cost Analytics",
@@ -147,7 +152,7 @@ export function AppSidebar() {
         ) : (
           <div className="px-2 py-3 animate-fade-in-soft">
             <img
-            src="/reef-logo.png"
+              src="/reef-logo.png"
               alt="R.E.E.F"
               className="h-10 w-auto transition-transform hover:scale-[1.02]"
             />

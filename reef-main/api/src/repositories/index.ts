@@ -39,6 +39,7 @@ import type {
   WorkerPurchasesRepository,
 } from "./types.js";
 import type { PurchaseActionsRepository } from "./purchase-actions.js";
+import type { SentinelRepository } from "./sentinel.js";
 
 /** Everything a request can reach, already scoped to the caller. */
 export type Repositories = {
@@ -65,4 +66,5 @@ export type Repositories = {
   purchaseActions: PurchaseActionsRepository;
   settings: SettingsRepository;
   workerPurchases: WorkerPurchasesRepository;
+  sentinel: SentinelRepository;
 };
