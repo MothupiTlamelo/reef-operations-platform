@@ -5,6 +5,7 @@ import type {
   JobRun,
   ListQuery,
   Notification,
+  PushSubscriptionInput,
   Role,
   UserSummary,
 } from "@reef/shared";
@@ -175,6 +176,46 @@ export interface JobRepository {
 export interface NotificationRepository {
   list(userId: string, opts: { unread?: boolean; limit: number }): Promise<Notification[]>;
   markRead(userId: string, id: string): Promise<boolean>;
+}
+
+/** A device that asked to be told, as stored. The keys are what encrypt a message for it. */
+export type StoredPushSubscription = {
+  user_id: string;
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+};
+
+/**
+ * The caller's own devices, through the caller's token, so row-level security applies. Saving
+ * always files the device under the caller, whoever had it before.
+ */
+export interface PushSubscriptionRepository {
+  save(sub: PushSubscriptionInput, userAgent: string | null): Promise<void>;
+  remove(userId: string, endpoint: string): Promise<boolean>;
+  list(userId: string): Promise<StoredPushSubscription[]>;
+}
+
+/** A reminder that has not been sent to anybody's phone yet. */
+export type PendingPush = {
+  id: string;
+  user_id: string;
+  subject: string;
+  body: string;
+  equipment_id: string | null;
+};
+
+/**
+ * What the push delivery reads and writes. It runs on the scheduler's service credential,
+ * because it sends to everybody's devices and nobody is calling.
+ */
+export interface PushDeliveryRepository {
+  /** Reminders created since `since` that have not been pushed, oldest first. */
+  pending(since: string, limit: number): Promise<PendingPush[]>;
+  subscriptionsFor(userIds: readonly string[]): Promise<StoredPushSubscription[]>;
+  markPushed(ids: readonly string[]): Promise<void>;
+  /** A device the push service says no longer exists. */
+  forget(endpoints: readonly string[]): Promise<void>;
 }
 
 export type Setting = {

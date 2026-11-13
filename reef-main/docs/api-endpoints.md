@@ -2,7 +2,7 @@
 
 Generated from the route registry by `npm run endpoints` in `api/`. Do not edit by hand.
 
-77 endpoints, 77 explained.
+81 endpoints, 81 explained.
 
 | Method | Path | Who may call it | What it is for | What it refuses |
 |---|---|---|---|---|
@@ -76,6 +76,10 @@ Generated from the route registry by `npm run endpoints` in `api/`. Do not edit 
 | GET | `/api/v1/admin/jobs` | owner | Whether the scheduled service sweep has been running, day by day, with the days it did not run listed separately. Defaults to the last thirty days. | Anyone but the owner. The field that matters is `missed`: a day the sweep did not run raises no error and writes no log line anywhere else, so a missing row is the only evidence it exists. |
 | GET | `/api/v1/notifications` | owner, manager, worker | The signed-in person's own notifications, newest first, with an unread filter. Today that is the service reminders the scheduled sweep raises. | Anybody else's notifications: there is no user parameter, and the database policy limits every read to the caller's own rows even if one were added. A limit above 200. |
 | PATCH | `/api/v1/notifications/:id/read` | owner, manager, worker | Marks one of your own notifications as read. | A notification belonging to somebody else, and one already read, both as 404. Marking a notification read is not a change anybody needs to be warned about, so this one carries no version check. |
+| GET | `/api/v1/push/config` | owner, manager, worker | Whether push notifications are set up on the server and, if so, the public VAPID key the browser needs to subscribe. The app hides its notifications switch when this says disabled. | A caller who is not signed in. |
+| POST | `/api/v1/push/subscriptions` | owner, manager, worker | Saves this device's push subscription for the signed-in person, so their service reminders also arrive on its lock screen. Saving the same device again refreshes it; a shared device moves to whoever saved it last. | An endpoint that is not an https URL, missing encryption keys, or any attempt to save a device for somebody else (there is no user field, and the database files every device under the caller). |
+| POST | `/api/v1/push/subscriptions/remove` | owner, manager, worker | Stops push notifications to one of the signed-in person's devices. A POST rather than a DELETE because the device is named by its endpoint URL, which is too long and too awkward for a path. | A device that is not the caller's, and one that was never saved, both as 404, so the answer does not reveal whether somebody else's device exists. |
+| POST | `/api/v1/push/test` | owner, manager, worker | Sends a test notification to every device the signed-in person has turned notifications on for, so they can check it works without waiting for a machine to fall due. | A server without push set up (409), and a person with no devices turned on (404). Only ever sends to the caller's own devices. |
 | GET | `/api/v1/settings` | owner, manager, worker | Lists the platform settings with their current values. Every role reads them, because the capture forms need the age limit. | A caller with no role. |
 | PATCH | `/api/v1/settings/:key` | owner | Changes one setting. Owner only, because a setting such as the capture age limit changes what every plant may record. | An unknown setting, or a value outside what that setting allows (the age limit is 1 to 365 whole days). |
 | GET | `/api/v1/worker-purchases` | Any signed-in user | Lists worker purchase claims the caller can see. A worker sees their own, a manager sees their plant, an owner sees everything. Filter by status, worker, mine, or month. | An unknown sort column, an unknown status filter, or a page size above 200. |

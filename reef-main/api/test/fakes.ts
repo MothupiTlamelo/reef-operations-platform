@@ -8,6 +8,8 @@ import type {
   MinePatch,
   Notification,
   PoLine,
+  PushPayload,
+  PushSubscriptionInput,
   PoLineInput,
   PurchaseOrder,
   PurchaseOrderInput,
@@ -24,11 +26,16 @@ import type {
   UserSummary,
 } from "@reef/shared";
 import type { Machine } from "../src/services/service-due.js";
-import { createApp } from "../src/app.js";
+import { createApp, type Deps } from "../src/app.js";
+import type { PushSender, SendOutcome } from "../src/services/push.js";
 import { ApiError } from "../src/http/errors.js";
 import type { Repositories } from "../src/repositories/index.js";
 import type { PurchaseActionsRepository } from "../src/repositories/purchase-actions.js";
 import type {
+  PendingPush,
+  PushDeliveryRepository,
+  PushSubscriptionRepository,
+  StoredPushSubscription,
   AnalyticsRepository,
   HistoryEntry,
   HistoryRepository,
@@ -993,7 +1000,84 @@ export class MemoryReportRuns implements ReportRunRepository {
   }
 }
 
-export function testApp(overrides: Partial<Repositories> = {}) {
+/** The caller's own devices, filed under whoever the current request is. */
+export class MemoryPushSubscriptions implements PushSubscriptionRepository {
+  rows: (StoredPushSubscription & { user_agent: string | null })[] = [];
+  constructor(private readonly actor: () => string | null) {}
+
+  async save(sub: PushSubscriptionInput, userAgent: string | null) {
+    await tick();
+    const userId = this.actor();
+    if (!userId) throw new ApiError("FORBIDDEN", "Sign in to turn on notifications");
+    // The same rule as save_push_subscription: one row per endpoint, owned by the last saver.
+    this.rows = this.rows.filter((r) => r.endpoint !== sub.endpoint);
+    this.rows.push({
+      user_id: userId,
+      endpoint: sub.endpoint,
+      p256dh: sub.keys.p256dh,
+      auth: sub.keys.auth,
+      user_agent: userAgent,
+    });
+  }
+  async remove(userId: string, endpoint: string) {
+    await tick();
+    const before = this.rows.length;
+    this.rows = this.rows.filter((r) => !(r.user_id === userId && r.endpoint === endpoint));
+    return this.rows.length < before;
+  }
+  async list(userId: string) {
+    await tick();
+    return this.rows.filter((r) => r.user_id === userId);
+  }
+}
+
+/** Unsent reminders and everybody's devices, as the scheduler's service credential sees them. */
+export class MemoryPushDelivery implements PushDeliveryRepository {
+  notifications: (PendingPush & { created_at: string; pushed_at: string | null })[] = [];
+  subs: StoredPushSubscription[] = [];
+
+  async pending(since: string, limit: number) {
+    await tick();
+    return this.notifications
+      .filter((n) => n.pushed_at === null && n.created_at >= since)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at))
+      .slice(0, limit)
+      .map(({ id, user_id, subject, body, equipment_id }) => ({
+        id,
+        user_id,
+        subject,
+        body,
+        equipment_id,
+      }));
+  }
+  async subscriptionsFor(userIds: readonly string[]) {
+    await tick();
+    return this.subs.filter((s) => userIds.includes(s.user_id));
+  }
+  async markPushed(ids: readonly string[]) {
+    await tick();
+    const at = new Date().toISOString();
+    for (const n of this.notifications) if (ids.includes(n.id)) n.pushed_at = at;
+  }
+  async forget(endpoints: readonly string[]) {
+    await tick();
+    this.subs = this.subs.filter((s) => !endpoints.includes(s.endpoint));
+  }
+}
+
+/** Records what would have gone out. `outcomes` sets the answer per endpoint; the default is sent. */
+export class FakePushSender implements PushSender {
+  sent: { endpoint: string; payload: PushPayload }[] = [];
+  outcomes: Record<string, SendOutcome> = {};
+  async send(sub: StoredPushSubscription, payload: PushPayload): Promise<SendOutcome> {
+    await tick();
+    const outcome = this.outcomes[sub.endpoint] ?? "sent";
+    if (outcome === "sent") this.sent.push({ endpoint: sub.endpoint, payload });
+    return outcome;
+  }
+}
+
+export function testApp(overrides: Partial<Repositories> = {}, opts: { push?: Deps["push"] } = {}) {
   const history = new MemoryHistory();
   // The signed-in user of the current request, which the history records as the actor, the
   // way the trigger reads auth.uid().
@@ -1021,6 +1105,7 @@ export function testApp(overrides: Partial<Repositories> = {}) {
   const reportRuns = new MemoryReportRuns();
   const retention = new MemoryRetention();
   const notifications = new MemoryNotifications();
+  const pushSubscriptions = new MemoryPushSubscriptions(actor);
   const jobs = new MemoryJobs();
   const reorderRequests = new MemoryReorderRequests();
   const users = new MemoryUsers(history, actor);
@@ -1201,6 +1286,7 @@ export function testApp(overrides: Partial<Repositories> = {}) {
 
   const { app, registry } = createApp({
     corsOrigins: ["http://localhost:8080"],
+    push: opts.push ?? null,
 
     verifyToken: async (token) => {
       const user = USERS[token];
@@ -1245,6 +1331,7 @@ export function testApp(overrides: Partial<Repositories> = {}) {
         reportRuns,
         retention,
         notifications,
+        pushSubscriptions,
         workerPurchases,
         workerPurchaseRows,
         jobs,
@@ -1303,6 +1390,7 @@ export function testApp(overrides: Partial<Repositories> = {}) {
     jobs,
     reorderRequests,
     notifications,
+    pushSubscriptions,
     purchaseActions,
     retention,
     sessionRows,

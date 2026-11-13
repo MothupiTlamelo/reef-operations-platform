@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Bell, CheckCheck, Wrench } from "lucide-react";
@@ -6,6 +6,8 @@ import type { Notification } from "@reef/shared";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { PushToggle } from "@/components/PushToggle";
+import { PUSH_STATE_KEY, getPushState } from "@/lib/push";
 import {
   NOTIFICATIONS_KEY,
   NOTIFICATIONS_POLL_MS,
@@ -32,6 +34,24 @@ export function NotificationBell() {
     refetchOnWindowFocus: true,
     staleTime: 30_000,
   });
+
+  // Check this device's alerts once per sign-in. If the browser is already subscribed, this
+  // files it under the person now signed in, so a shared phone keeps working after a sign-out.
+  useEffect(() => {
+    void qc.prefetchQuery({ queryKey: PUSH_STATE_KEY, queryFn: getPushState, retry: false });
+  }, [qc]);
+
+  // A push that arrives while the app is open refreshes the bell straight away.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    const onMessage = (event: MessageEvent) => {
+      if ((event.data as { type?: string } | null)?.type === "reef-push") {
+        void qc.invalidateQueries({ queryKey: NOTIFICATIONS_KEY });
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+  }, [qc]);
 
   const items = data ?? [];
   const unread = items.filter((n) => !n.read_at);
@@ -159,6 +179,8 @@ export function NotificationBell() {
             </ul>
           )}
         </div>
+
+        <PushToggle />
       </PopoverContent>
     </Popover>
   );

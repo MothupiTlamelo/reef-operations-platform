@@ -29,6 +29,17 @@ const Env = z
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
     // REEF's own calendar day, so "did yesterday's sweep run" has exactly one answer.
     SCHEDULE_TIMEZONE: z.string().min(1).default("Africa/Johannesburg"),
+    // Push notifications. The VAPID key pair signs every push so the browser vendor's push
+    // service knows the message came from REEF. Generate it once with `npx web-push
+    // generate-vapid-keys`. The public key is public by design; the private key stays here.
+    // Optional: without both, the API still runs and the app hides the notifications switch.
+    VAPID_PUBLIC_KEY: z.string().min(1).optional(),
+    VAPID_PRIVATE_KEY: z.string().min(1).optional(),
+    // Who the push services contact if REEF's messages cause trouble: a mailto: or https: URL.
+    VAPID_SUBJECT: z
+      .string()
+      .regex(/^(mailto:|https:\/\/)/, "must start with mailto: or https://")
+      .default("mailto:owner@reef.co.za"),
   })
   .refine((e) => e.RETENTION_IDENTITY_YEARS <= e.RETENTION_RECORD_YEARS, {
     // Removing the identity number while keeping the rest of the record is the whole point of the
@@ -36,6 +47,12 @@ const Env = z
     // would contradict each other and the longer one would silently win.
     message: "RETENTION_IDENTITY_YEARS must not be longer than RETENTION_RECORD_YEARS",
     path: ["RETENTION_IDENTITY_YEARS"],
+  })
+  .refine((e) => Boolean(e.VAPID_PUBLIC_KEY) === Boolean(e.VAPID_PRIVATE_KEY), {
+    // One without the other cannot sign a push, and would fail on the first reminder rather
+    // than at start-up.
+    message: "Set both VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY, or neither",
+    path: ["VAPID_PRIVATE_KEY"],
   });
 
 export type Config = {
@@ -46,6 +63,8 @@ export type Config = {
   retention: RetentionYears;
   serviceRoleKey: string | null;
   timezone: string;
+  /** Null when push notifications are not set up. */
+  vapid: { publicKey: string; privateKey: string; subject: string } | null;
 };
 
 /** Fails at start-up, naming every missing setting, rather than on the first request. */
@@ -69,5 +88,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     },
     serviceRoleKey: e.SUPABASE_SERVICE_ROLE_KEY ?? null,
     timezone: e.SCHEDULE_TIMEZONE,
+    vapid:
+      e.VAPID_PUBLIC_KEY && e.VAPID_PRIVATE_KEY
+        ? {
+            publicKey: e.VAPID_PUBLIC_KEY,
+            privateKey: e.VAPID_PRIVATE_KEY,
+            subject: e.VAPID_SUBJECT,
+          }
+        : null,
   };
 }

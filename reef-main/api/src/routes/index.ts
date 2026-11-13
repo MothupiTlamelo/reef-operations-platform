@@ -28,6 +28,7 @@ import { analyticsRoutes } from "./analytics.js";
 import { purchasingRoutes } from "./purchasing.js";
 import { defineRoute } from "./define.js";
 import { notificationRoutes } from "./notifications.js";
+import { pushRoutes } from "./push.js";
 import { resourceRoutes, scopedResourceRoutes } from "./resource.js";
 import { settingsRoutes } from "./settings.js";
 import { workerPurchasesRoutes } from "./worker-purchases.js";
@@ -322,6 +323,7 @@ export function registerRoutes(app: Hono<AppEnv>, registry: Registry) {
   analyticsRoutes(app, registry);
   adminRoutes(app, registry);
   notificationRoutes(app, registry);
+  pushRoutes(app, registry);
   settingsRoutes(app, registry);
   workerPurchasesRoutes(app, registry);
 }

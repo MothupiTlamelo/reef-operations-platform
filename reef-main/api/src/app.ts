@@ -9,6 +9,7 @@ import { ApiError } from "./http/errors.js";
 import { Registry } from "./registry.js";
 import type { Repositories } from "./repositories/index.js";
 import { registerRoutes } from "./routes/index.js";
+import type { PushSender } from "./services/push.js";
 
 export type Deps = {
   verifyToken: TokenVerifier;
@@ -17,6 +18,8 @@ export type Deps = {
   /** How long employee information is kept. Falls back to the values in the shared policy. */
   retention?: RetentionYears;
   log?: (msg: string, err: unknown) => void;
+  /** Push notifications. Absent when the VAPID keys are not configured. */
+  push?: { publicKey: string; sender: PushSender } | null;
 };
 
 export type AppEnv = {
