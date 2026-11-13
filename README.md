@@ -2,9 +2,13 @@
 
 An integrated operations management platform designed to support mining operations, business administration, operational monitoring and intelligent decision-making.
 
----  
+## Project Links
 
-# https://youtu.be/U0xm50aKDo0 #
+- **Live Web Application:** https://reef-operations-platform.vercel.app/
+- **GitHub Repository:** https://github.com/MothupiTlamelo/reef-operations-platform
+- **YouTube Demonstration:** https://youtu.be/U0xm50aKDo0
+
+---
 
 ## Table of Contents
 
@@ -107,7 +111,7 @@ The web application provides the main interface for accessing the platform's ope
 
 It allows authorised users to navigate between modules, manage records, view operational information and interact with the system.
 
-**Web application URL:** `[INSERT WEB APPLICATION URL]`
+**Web application URL:** https://reef-operations-platform.vercel.app/
 
 ### 4.2 Mobile Application
 
@@ -115,7 +119,7 @@ The mobile application provides a mobile interface for accessing relevant platfo
 
 It is developed using Kotlin and Android development technologies.
 
-**Mobile application download URL:** `[INSERT MOBILE APPLICATION DOWNLOAD URL]`
+**Mobile application download URL:** Not provided.
 
 ### 4.3 Backend Services
 
@@ -478,7 +482,7 @@ The following tools are required:
 Clone the project repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/MothupiTlamelo/reef-operations-platform.git
 ```
 
 Navigate into the project directory:
@@ -653,21 +657,23 @@ The assistant responds according to the available data, configured tools and use
 
 ## 15. Deployment and Access
 
+**Source code repository:** https://github.com/MothupiTlamelo/reef-operations-platform
+
 ### 15.1 Web Application
 
-**Application URL:** `[INSERT WEB APPLICATION URL]`
+**Application URL:** https://reef-operations-platform.vercel.app/
 
 ### 15.2 Mobile Application
 
-**Application download URL:** `[INSERT MOBILE APPLICATION URL]`
+**Application download URL:** Not provided.
 
-**Distribution platform:** `[INSERT DISTRIBUTION PLATFORM]`
+**Distribution platform:** Not provided.
 
 ### 15.3 YouTube Demonstration
 
 The demonstration video provides an overview of the platform's functionality and user workflows.
 
-**YouTube video URL:** `[INSERT YOUTUBE VIDEO URL]`
+**YouTube video URL:** https://youtu.be/U0xm50aKDo0
 
 ## 16. Future Enhancements
 
