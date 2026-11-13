@@ -24,6 +24,7 @@ import type {
   JobRepository,
   MaintenancePartsRepository,
   NotificationRepository,
+  PushSubscriptionRepository,
   PhotoStore,
   Repository,
   ReportRunRepository,
@@ -62,6 +63,7 @@ export type Repositories = {
   reportRuns: ReportRunRepository;
   retention: RetentionRepository;
   notifications: NotificationRepository;
+  pushSubscriptions: PushSubscriptionRepository;
   jobs: JobRepository;
   purchaseActions: PurchaseActionsRepository;
   settings: SettingsRepository;

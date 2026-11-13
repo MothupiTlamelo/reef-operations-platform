@@ -26,6 +26,12 @@ export type SchedulerDeps = {
   zone: string;
   now?: () => Date;
   log?: (message: string) => void;
+  /**
+   * Runs on every tick, after the sweep has had its turn, whether or not it swept. Push delivery
+   * hangs off this, so a reminder raised by today's sweep reaches phones on the same tick, and
+   * one that failed to send is retried on the next.
+   */
+  afterSweep?: () => Promise<void>;
 };
 
 /**
@@ -74,6 +80,12 @@ export function startScheduler(deps: SchedulerDeps, everyMs = 15 * 60 * 1000) {
     } catch {
       // Already recorded against the run and logged. A failure must not stop the timer, or one
       // bad day silently ends the reminders for good.
+    }
+    try {
+      await deps.afterSweep?.();
+    } catch (err) {
+      // Same rule: a push service outage must not stop tomorrow's sweep.
+      deps.log?.(`after-sweep step failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       running = false;
     }

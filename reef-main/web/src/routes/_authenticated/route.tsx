@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, redirect, useNavigate, Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchMe } from "@/lib/api";
+import { disablePush } from "@/lib/push";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -28,6 +29,9 @@ function AuthedLayout() {
   const qc = useQueryClient();
 
   const signOut = async () => {
+    // Stop this device getting the next reminders for this account. Best effort: signing out
+    // must never be blocked by a push service or a dropped connection.
+    await disablePush({ keepBrowser: true }).catch(() => undefined);
     await qc.cancelQueries();
     qc.clear();
     await supabase.auth.signOut();

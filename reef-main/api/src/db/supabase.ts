@@ -3,6 +3,7 @@ import type { Config } from "../config.js";
 import type { Repositories } from "../repositories/index.js";
 import { SupabasePurchaseActions } from "../repositories/purchase-actions.js";
 import { SupabasePurchaseOrderRepository } from "../repositories/purchase-orders.js";
+import { SupabasePushDelivery, SupabasePushSubscriptions } from "../repositories/push.js";
 import { SupabaseSentinelRepository } from "../repositories/sentinel.js";
 import { SupabaseStockLevelRepository } from "../repositories/stock-levels.js";
 import { SupabaseStockRepository } from "../repositories/stock.js";
@@ -26,7 +27,11 @@ import {
   SupabaseUserRepository,
 } from "../repositories/supabase.js";
 import { supabaseWorkerPurchases } from "../repositories/worker-purchases.js";
-import type { JobRepository, ServiceSweepRepository } from "../repositories/types.js";
+import type {
+  JobRepository,
+  PushDeliveryRepository,
+  ServiceSweepRepository,
+} from "../repositories/types.js";
 
 /**
  * Builds the repositories for one request, carrying the caller's own token.
@@ -60,6 +65,7 @@ export function supabaseRepositories(config: Config) {
       reportRuns: new SupabaseReportRunRepository(db),
       retention: new SupabaseRetentionRepository(db),
       notifications: new SupabaseNotificationRepository(db),
+      pushSubscriptions: new SupabasePushSubscriptions(db),
       jobs: new SupabaseJobRepository(db),
       purchaseActions: new SupabasePurchaseActions(db),
       settings: new SupabaseSettings(db),
@@ -78,9 +84,11 @@ export function supabaseRepositories(config: Config) {
  * never reachable from a request. Null when the key is not configured, which
  * is how the scheduler knows it is not running.
  */
-export function schedulerRepositories(
-  config: Config,
-): { jobs: JobRepository; sweepRepo: ServiceSweepRepository } | null {
+export function schedulerRepositories(config: Config): {
+  jobs: JobRepository;
+  sweepRepo: ServiceSweepRepository;
+  pushRepo: PushDeliveryRepository;
+} | null {
   if (!config.serviceRoleKey) return null;
 
   const db = createClient(config.supabaseUrl, config.serviceRoleKey, {
@@ -90,5 +98,6 @@ export function schedulerRepositories(
   return {
     jobs: new SupabaseJobRepository(db),
     sweepRepo: new SupabaseServiceSweepRepository(db),
+    pushRepo: new SupabasePushDelivery(db),
   };
 }
