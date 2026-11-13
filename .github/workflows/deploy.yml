@@ -17,6 +17,11 @@ jobs:
     name: Deploy to production
     runs-on: ubuntu-latest
 
+    # The app lives in reef-main/, not at the top of the repository.
+    defaults:
+      run:
+        working-directory: reef-main
+
     env:
       # Supabase production runs Postgres 17. The PGDG repo installs the matching
       # client tools at this path; the distro's default is 16, which pg_dump refuses
@@ -33,8 +38,8 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: |
-            shared/package-lock.json
-            api/package-lock.json
+            reef-main/shared/package-lock.json
+            reef-main/api/package-lock.json
 
       # The deploy workflow uses psql and pg_dump to back up and to migrate. The
       # distro package is Postgres 16; production runs 17. Install the matching
@@ -94,7 +99,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: database-backup
-          path: backup/
+          path: reef-main/backup/
           retention-days: 30
 
       # 3. Apply every migration in order, as the owner user. The owner is the only
@@ -131,11 +136,11 @@ jobs:
       # 4. Build shared, then build the API. The API depends on the compiled output of
       #    shared, so shared has to build first.
       - name: Build shared
-        working-directory: shared
+        working-directory: reef-main/shared
         run: npm ci && npm run build
 
       - name: Build API
-        working-directory: api
+        working-directory: reef-main/api
         run: npm ci && npm run build
 
       # 5. Trigger the Render deploy. The hook URL is a secret; the service rebuilds
